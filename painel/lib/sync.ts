@@ -2,6 +2,7 @@ import { db, migrar } from './db'
 import { ghl } from './ghl'
 import { chaveEtapa } from './etapas'
 import type { Casa } from './casas'
+import { atribuirContato, modoDaCasa } from './rodizio'
 
 const DIA = 86_400_000
 
@@ -12,6 +13,7 @@ export interface ResultadoSync {
   agendamentos: number
   historicosLidos: number
   historicosPendentes: number
+  reparados: number
   segundos: number
 }
 
@@ -90,6 +92,19 @@ export async function sincronizarCasa(casa: Casa, ate: number): Promise<Resultad
         visto_em = excluded.visto_em`)
     await sql`delete from oportunidades where location_id = ${lid} and visto_em < ${agora}`
 
+    // rede de segurança do rodízio: lead novo que ficou sem dono (webhook falhou) recebe alguém da equipe
+    let reparados = 0
+    if (await modoDaCasa(lid) === 'ativo') {
+      const semDono = new Set(opps
+        .filter(o => o.status === 'open' && !o.assignedTo && o.contactId && Date.now() - Date.parse(o.createdAt) < 48 * 3600_000)
+        .map(o => o.contactId as string))
+      for (const contato of semDono) {
+        try {
+          if ((await atribuirContato(casa, contato, 'reparo')).ok) reparados++
+        } catch { /* tenta de novo na próxima hora */ }
+      }
+    }
+
     // agendamentos: as visitas ficam nas agendas pessoais, então lê por usuário (janela de -60 a +60 dias)
     const ini = Date.now() - 60 * DIA, fim = Date.now() + 60 * DIA
     const eventos = new Map<string, any>()
@@ -132,7 +147,7 @@ export async function sincronizarCasa(casa: Casa, ate: number): Promise<Resultad
 
     const resultado: ResultadoSync = {
       casa: casa.casa, base: casa.base, oportunidades: opps.length, agendamentos: ags.length,
-      historicosLidos: lidos, historicosPendentes: pendentes.length - lidos,
+      historicosLidos: lidos, historicosPendentes: pendentes.length - lidos, reparados,
       segundos: Math.round((Date.now() - t0) / 1000),
     }
     await sql`update sincronizacoes set fim = now(), ok = true, detalhe = ${sql.json(resultado as any)} where id = ${syncId}`
