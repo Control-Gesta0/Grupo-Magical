@@ -12,6 +12,17 @@ export default async function VisaoGeral({ searchParams }: { searchParams: Promi
   const mes = mesValido(sp.mes)
   const base = sp.base && BASES[sp.base] ? sp.base : 'vendas'
   const linhas = await resumoCasas(mes, base)
+  if (linhas.length === 0) {
+    return (
+      <>
+        <Filtros mes={mes} base={base} acao="/" />
+        <div className="aviso">
+          Nenhuma conta de {BASES[base]} sincronizada ainda. A sincronização roda nos primeiros minutos de cada hora;
+          volte depois da próxima hora cheia.
+        </div>
+      </>
+    )
+  }
   const t = Object.fromEntries(CAMPOS.map(c => [c, linhas.reduce((s, l) => s + l[c], 0)])) as Soma
   const semComparecimento = t.visitas > 0 && t.realizadas + t.faltas < t.visitas * 0.2
   const historicoIncompleto = t.historico_total > 0 && t.historico_ok < t.historico_total

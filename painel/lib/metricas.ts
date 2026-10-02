@@ -1,4 +1,4 @@
-import { db } from './db'
+import { db, migrar } from './db'
 
 export interface LinhaCasa {
   location_id: string
@@ -44,6 +44,7 @@ const BASE = (mes: string) => db()`
   )`
 
 export async function resumoCasas(mes: string, base: string): Promise<LinhaCasa[]> {
+  await migrar()
   const sql = db()
   return sql<LinhaCasa[]>`
     ${BASE(mes)}
@@ -89,6 +90,7 @@ export interface LinhaVendedor {
 }
 
 export async function porVendedor(lid: string, mes: string): Promise<LinhaVendedor[]> {
+  await migrar()
   const sql = db()
   return sql<LinhaVendedor[]>`
     ${BASE(mes)},
@@ -123,6 +125,7 @@ export interface FechamentoPulou {
 }
 
 export async function fechamentosQuePularam(lid: string, mes: string): Promise<FechamentoPulou[]> {
+  await migrar()
   const sql = db()
   return sql<FechamentoPulou[]>`
     ${BASE(mes)}
@@ -135,6 +138,7 @@ export async function fechamentosQuePularam(lid: string, mes: string): Promise<F
 }
 
 export async function casa(lid: string) {
+  await migrar()
   const [c] = await db()<{ location_id: string; casa: string; nome: string; base: string }[]>`
     select * from casas where location_id = ${lid}`
   return c ?? null
