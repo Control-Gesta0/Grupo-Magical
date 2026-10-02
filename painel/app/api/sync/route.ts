@@ -10,7 +10,13 @@ export async function GET(req: Request) {
     return Response.json({ erro: 'não autorizado' }, { status: 401 })
   }
   const i = Number(new URL(req.url).searchParams.get('i'))
-  const c = casas()[i]
+  let lista
+  try {
+    lista = casas()
+  } catch (e: any) {
+    return Response.json({ ok: false, erro: e.message }, { status: 500 })
+  }
+  const c = lista[i]
   if (!Number.isInteger(i) || !c) return Response.json({ ok: true, ignorado: `sem conta no índice ${i}` })
   try {
     // deixa folga para fechar a função antes dos 300s
