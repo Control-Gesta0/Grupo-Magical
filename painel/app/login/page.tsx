@@ -6,7 +6,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
   async function acao(form: FormData) {
     'use server'
     const ok = await entrar(String(form.get('email') ?? ''), String(form.get('senha') ?? ''))
-    redirect(ok ? '/' : '/login?erro=1')
+    redirect(ok ? '/dia' : '/login?erro=1')
   }
   return (
     <form action={acao} className="login">

@@ -30,3 +30,17 @@ export function dataHora(d: Date | string | null) {
 }
 
 export const BASES: Record<string, string> = { vendas: 'Vendas', planejamento: 'Planejamento', decoracao: 'Decoração' }
+
+export function hoje() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+}
+
+export function diaValido(d: string | undefined) {
+  return d && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : hoje()
+}
+
+export function nomeDia(d: string) {
+  const [a, m, dd] = d.split('-').map(Number)
+  const s = new Date(Date.UTC(a, m - 1, dd, 12)).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', timeZone: 'UTC' })
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}

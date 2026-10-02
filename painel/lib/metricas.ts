@@ -143,3 +143,54 @@ export async function casa(lid: string) {
     select * from casas where location_id = ${lid}`
   return c ?? null
 }
+
+export interface DiaCasa {
+  location_id: string
+  nome: string
+  agendados: number
+  visitas: number
+  realizadas: number
+  faltas: number
+  canceladas: number
+}
+
+export interface DiaPessoa {
+  usuario_id: string | null
+  nome: string | null
+  casas: string
+  agendados: number
+}
+
+// "Agendados no dia" conta pela data de criação e por quem criou (createdBy), não pelo dono da agenda.
+const DIA = (data: string) => db()`
+  with d as (
+    select (${data}::timestamp at time zone 'America/Sao_Paulo') as ini,
+           ((${data}::timestamp + interval '1 day') at time zone 'America/Sao_Paulo') as fim
+  )`
+
+export async function agendaDoDia(data: string, base: string) {
+  await migrar()
+  const sql = db()
+  const casas = await sql<DiaCasa[]>`
+    ${DIA(data)}
+    select c.location_id, c.nome,
+      (select count(*) from agendamentos a, d where a.location_id = c.location_id and a.criado_em >= d.ini and a.criado_em < d.fim)::int as agendados,
+      (select count(*) from agendamentos a, d where a.location_id = c.location_id and a.inicio >= d.ini and a.inicio < d.fim and a.status is distinct from 'cancelled')::int as visitas,
+      (select count(*) from agendamentos a, d where a.location_id = c.location_id and a.inicio >= d.ini and a.inicio < d.fim and a.status = 'showed')::int as realizadas,
+      (select count(*) from agendamentos a, d where a.location_id = c.location_id and a.inicio >= d.ini and a.inicio < d.fim and a.status = 'noshow')::int as faltas,
+      (select count(*) from agendamentos a, d where a.location_id = c.location_id and a.inicio >= d.ini and a.inicio < d.fim and a.status = 'cancelled')::int as canceladas
+    from casas c where c.base = ${base} order by c.nome`
+  const pessoas = await sql<DiaPessoa[]>`
+    ${DIA(data)}
+    select coalesce(a.criado_por, a.dono_id) as usuario_id, u.nome,
+      string_agg(distinct c.nome, ', ') as casas, count(*)::int as agendados
+    from agendamentos a join casas c on c.location_id = a.location_id
+      left join usuarios u on u.id = coalesce(a.criado_por, a.dono_id), d
+    where c.base = ${base} and a.criado_em >= d.ini and a.criado_em < d.fim
+    group by 1, 2 order by agendados desc, u.nome`
+  const [sync] = await sql<{ fim: Date | null }[]>`
+    select min(ultima) as fim from (
+      select max(s.fim) as ultima from sincronizacoes s join casas c on c.location_id = s.location_id
+      where c.base = ${base} and s.ok group by s.location_id) x`
+  return { casas, pessoas, sincronizadoAte: sync?.fim ?? null }
+}

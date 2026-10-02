@@ -7,7 +7,7 @@ export function db(): postgres.Sql {
   const url = process.env.DATABASE_URL || process.env.POSTGRES_URL
   if (!url) throw new Error('DATABASE_URL não definida')
   const local = /localhost|127\.0\.0\.1|\/var\/run/.test(url)
-  g.__sql = postgres(url, { ssl: local ? false : 'require', max: 5, idle_timeout: 20, prepare: false })
+  g.__sql = postgres(url, { ssl: local ? false : 'require', max: 5, idle_timeout: 20, prepare: false, onnotice: () => {} })
   return g.__sql
 }
 
@@ -80,6 +80,8 @@ create table if not exists agendamentos (
   visto_em timestamptz not null
 );
 create index if not exists agendamentos_loc on agendamentos (location_id, inicio);
+alter table agendamentos add column if not exists criado_por text;
+create index if not exists agendamentos_criado on agendamentos (criado_em);
 create table if not exists sincronizacoes (
   id bigserial primary key,
   location_id text not null,

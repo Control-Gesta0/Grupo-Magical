@@ -102,12 +102,14 @@ export async function sincronizarCasa(casa: Casa, ate: number): Promise<Resultad
       id: e.id, location_id: lid, calendario_id: e.calendarId ?? null, contato_id: e.contactId ?? null,
       dono_id: e.assignedUserId ?? null, inicio: e.startTime ?? null, criado_em: e.dateAdded ?? null,
       status: e.appointmentStatus ?? null, titulo: e.title ?? null, visto_em: agora,
+      criado_por: e.createdBy?.userId ?? null,
     }))
     await emLotes(ags, 500, lote => sql`
       insert into agendamentos ${sql(lote)}
       on conflict (id) do update set calendario_id = excluded.calendario_id, contato_id = excluded.contato_id,
         dono_id = excluded.dono_id, inicio = excluded.inicio, criado_em = excluded.criado_em,
-        status = excluded.status, titulo = excluded.titulo, visto_em = excluded.visto_em`)
+        status = excluded.status, titulo = excluded.titulo, visto_em = excluded.visto_em,
+        criado_por = excluded.criado_por`)
     await sql`delete from agendamentos where location_id = ${lid} and visto_em < ${agora}
       and inicio between ${new Date(ini)} and ${new Date(fim)}`
 
