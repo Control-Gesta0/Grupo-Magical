@@ -18,18 +18,23 @@ TZ = dt.timezone(dt.timedelta(hours=-3))
 
 def get(path, tok, ver="2021-07-28"):
     # User-Agent obrigatório: o Cloudflare do GHL devolve 1010 para o UA padrão do Python
-    req = urllib.request.Request(API + path, headers={
+    return pedir(urllib.request.Request(API + path, headers={
         "Authorization": "Bearer " + tok, "Version": ver,
-        "Accept": "application/json", "User-Agent": "Mozilla/5.0 (painel-magical)"})
-    for tentativa in range(4):
+        "Accept": "application/json", "User-Agent": "Mozilla/5.0 (painel-magical)"}))
+
+
+def pedir(req):
+    for tentativa in range(5):
         try:
-            with urllib.request.urlopen(req, timeout=30) as f:
+            with urllib.request.urlopen(req, timeout=60) as f:
                 return f.status, json.load(f)
         except urllib.error.HTTPError as e:
-            if e.code == 429:
-                time.sleep(2 * (tentativa + 1))
-                continue
-            return e.code, e.read().decode()[:200]
+            if e.code != 429:
+                return e.code, e.read().decode()[:200]
+        except (urllib.error.URLError, TimeoutError):  # o handshake TLS às vezes estoura o tempo
+            if tentativa == 4:
+                raise
+        time.sleep(2 * (tentativa + 1))
     return 429, None
 
 
