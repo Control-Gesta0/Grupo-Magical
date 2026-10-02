@@ -105,7 +105,10 @@ export async function atribuirContato(casa: Casa, contatoId: string, origem = 'w
     select usuario_id from equipe where location_id = ${lid} and ativo`).map(r => r.usuario_id))
   const { opportunities = [] } = await ghl<{ opportunities: any[] }>(
     `/opportunities/search?location_id=${lid}&contact_id=${contatoId}&status=open`, casa.token)
-  const cards = opportunities.filter(o => !o.assignedTo || !membros.has(o.assignedTo))
+  // card sem dono, com dono fora da equipe, ou recém-criado neste mesmo fluxo (caso o "Assign to user" ainda esteja ligado)
+  const recente = (o: any) => Date.now() - Date.parse(o.createdAt ?? 0) < 15 * 60_000
+  const cards = opportunities.filter(o => o.assignedTo !== escolhido
+    && (!o.assignedTo || !membros.has(o.assignedTo) || recente(o)))
   for (const o of cards) await ghlGravar('PUT', `/opportunities/${o.id}`, casa.token, { assignedTo: escolhido })
   await sql`update atribuicoes set detalhe = ${sql.json({ cards: cards.map(o => o.id) })}
     where location_id = ${lid} and contato_id = ${contatoId} and simulada = false and origem = ${origem}`
