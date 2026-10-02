@@ -17,7 +17,7 @@ export default async function Painel({ children }: { children: ReactNode }) {
     <>
       <header className="topo">
         <h1><Link href="/">Painel de Gestão · Grupo Magical</Link></h1>
-        <nav className="abas"><Link href="/dia">Dia</Link><Link href="/">Mês</Link></nav>
+        <nav className="abas"><Link href="/dia">Dia</Link><Link href="/">Mês</Link><Link href="/equipe">Equipe</Link></nav>
         <span className="suave">{u.nome}</span>
         <form action={acaoSair}><button type="submit">Sair</button></form>
       </header>

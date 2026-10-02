@@ -84,6 +84,46 @@ alter table agendamentos add column if not exists criado_por text;
 create index if not exists agendamentos_criado on agendamentos (criado_em);
 create index if not exists oportunidades_contato on oportunidades (location_id, contato_id);
 drop view if exists visitas;
+-- Fase 2: equipe e rodízio central
+create table if not exists equipe (
+  location_id text not null,
+  usuario_id text not null,
+  ativo boolean not null default true,
+  desde timestamptz not null default now(),
+  primary key (location_id, usuario_id)
+);
+create table if not exists rodizio_config (
+  location_id text primary key,
+  modo text not null default 'desligado' check (modo in ('desligado', 'simulacao', 'ativo'))
+);
+create table if not exists atribuicoes (
+  id bigserial primary key,
+  location_id text not null,
+  contato_id text not null,
+  usuario_id text,
+  em timestamptz not null default now(),
+  origem text not null,
+  simulada boolean not null,
+  detalhe jsonb
+);
+create index if not exists atribuicoes_loc on atribuicoes (location_id, simulada, usuario_id, em);
+create index if not exists atribuicoes_contato on atribuicoes (location_id, contato_id);
+create table if not exists transferencias (
+  id bigserial primary key,
+  location_id text not null,
+  de text not null,
+  para text not null,
+  destino_casa text,
+  incluir_descartados boolean not null,
+  status text not null,
+  plano jsonb,
+  total int,
+  feitos int not null default 0,
+  erro text,
+  criado_por text,
+  criado_em timestamptz not null default now(),
+  atualizado_em timestamptz not null default now()
+);
 create table if not exists sincronizacoes (
   id bigserial primary key,
   location_id text not null,
@@ -94,9 +134,15 @@ create table if not exists sincronizacoes (
 );
 `
 
-let migrado = false
-export async function migrar() {
-  if (migrado) return
-  await db().unsafe(SCHEMA)
-  migrado = true
+// uma migração por instância, serializada entre instâncias (cron e telas abrindo ao mesmo tempo davam deadlock)
+let migracao: Promise<void> | null = null
+export function migrar(): Promise<void> {
+  migracao ??= db()
+    .begin(async tx => {
+      await tx`select pg_advisory_xact_lock(7321001)`
+      await tx.unsafe(SCHEMA)
+    })
+    .then(() => undefined)
+    .catch(e => { migracao = null; throw e })
+  return migracao
 }
