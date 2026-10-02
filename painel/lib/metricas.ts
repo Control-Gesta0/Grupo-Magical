@@ -52,8 +52,8 @@ export async function resumoCasas(mes: string, base: string): Promise<LinhaCasa[
       (select count(*) from opp, p where opp.location_id = c.location_id and opp.criado_em >= p.ini and opp.criado_em < p.fim)::int as leads,
       (select count(*) from agendamentos a, p where a.location_id = c.location_id and a.criado_em >= p.ini and a.criado_em < p.fim)::int as agendados,
       (select count(*) from agendamentos a, p where a.location_id = c.location_id and a.inicio >= p.ini and a.inicio < p.fim and a.status is distinct from 'cancelled')::int as visitas,
-      (select count(*) from agendamentos a, p where a.location_id = c.location_id and a.inicio >= p.ini and a.inicio < p.fim and a.status = 'showed')::int as realizadas,
-      (select count(*) from agendamentos a, p where a.location_id = c.location_id and a.inicio >= p.ini and a.inicio < p.fim and a.status = 'noshow')::int as faltas,
+      (select count(*) from visitas a, p where a.location_id = c.location_id and a.inicio >= p.ini and a.inicio < p.fim and a.virou_orcamento)::int as realizadas,
+      (select count(*) from visitas a, p where a.location_id = c.location_id and a.inicio >= p.ini and a.inicio < p.fim and a.inicio < now() and not a.virou_orcamento)::int as faltas,
       (select count(*) from agendamentos a, p where a.location_id = c.location_id and a.inicio >= p.ini and a.inicio < p.fim and a.status = 'cancelled')::int as canceladas,
       (select count(distinct m.oportunidade_id) from movimentos m join opp o on o.id = m.oportunidade_id, p
          where m.location_id = c.location_id and m.chave_para = 'orcamento' and m.em >= p.ini and m.em < p.fim)::int as orcamentos,
@@ -82,6 +82,8 @@ export interface LinhaVendedor {
   nome: string | null
   leads: number
   agendados: number
+  visitas: number
+  compareceu: number
   orcamentos: number
   fechamentos: number
   pulou: number
@@ -103,6 +105,8 @@ export async function porVendedor(lid: string, mes: string): Promise<LinhaVended
       select d.dono_id, u.nome,
         (select count(*) from opp, p where opp.location_id = ${lid} and opp.dono_id = d.dono_id and opp.criado_em >= p.ini and opp.criado_em < p.fim)::int as leads,
         (select count(*) from agendamentos a, p where a.location_id = ${lid} and a.dono_id = d.dono_id and a.criado_em >= p.ini and a.criado_em < p.fim)::int as agendados,
+        (select count(*) from visitas a, p where a.location_id = ${lid} and a.dono_id = d.dono_id and a.inicio >= p.ini and a.inicio < p.fim and a.inicio < now())::int as visitas,
+        (select count(*) from visitas a, p where a.location_id = ${lid} and a.dono_id = d.dono_id and a.inicio >= p.ini and a.inicio < p.fim and a.virou_orcamento)::int as compareceu,
         (select count(distinct m.oportunidade_id) from movimentos m join opp o on o.id = m.oportunidade_id, p
            where m.location_id = ${lid} and o.dono_id = d.dono_id and m.chave_para = 'orcamento' and m.em >= p.ini and m.em < p.fim)::int as orcamentos,
         (select count(*) from fech_class f join opp o on o.id = f.oportunidade_id where f.location_id = ${lid} and o.dono_id = d.dono_id)::int as fechamentos,
@@ -176,8 +180,8 @@ export async function agendaDoDia(data: string, base: string) {
     select c.location_id, c.nome,
       (select count(*) from agendamentos a, d where a.location_id = c.location_id and a.criado_em >= d.ini and a.criado_em < d.fim)::int as agendados,
       (select count(*) from agendamentos a, d where a.location_id = c.location_id and a.inicio >= d.ini and a.inicio < d.fim and a.status is distinct from 'cancelled')::int as visitas,
-      (select count(*) from agendamentos a, d where a.location_id = c.location_id and a.inicio >= d.ini and a.inicio < d.fim and a.status = 'showed')::int as realizadas,
-      (select count(*) from agendamentos a, d where a.location_id = c.location_id and a.inicio >= d.ini and a.inicio < d.fim and a.status = 'noshow')::int as faltas,
+      (select count(*) from visitas a, d where a.location_id = c.location_id and a.inicio >= d.ini and a.inicio < d.fim and a.virou_orcamento)::int as realizadas,
+      (select count(*) from visitas a, d where a.location_id = c.location_id and a.inicio >= d.ini and a.inicio < d.fim and a.inicio < now() and not a.virou_orcamento)::int as faltas,
       (select count(*) from agendamentos a, d where a.location_id = c.location_id and a.inicio >= d.ini and a.inicio < d.fim and a.status = 'cancelled')::int as canceladas
     from casas c where c.base = ${base} order by c.nome`
   const pessoas = await sql<DiaPessoa[]>`

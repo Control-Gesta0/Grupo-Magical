@@ -24,7 +24,6 @@ export default async function VisaoGeral({ searchParams }: { searchParams: Promi
     )
   }
   const t = Object.fromEntries(CAMPOS.map(c => [c, linhas.reduce((s, l) => s + l[c], 0)])) as Soma
-  const semComparecimento = t.visitas > 0 && t.realizadas + t.faltas < t.visitas * 0.2
   const historicoIncompleto = t.historico_total > 0 && t.historico_ok < t.historico_total
   const syncs = linhas.map(l => l.ultima_sync).filter(Boolean) as Date[]
   const falhas = linhas.filter(l => l.sync_ok === false)
@@ -60,7 +59,7 @@ export default async function VisaoGeral({ searchParams }: { searchParams: Promi
         <table>
           <thead>
             <tr>
-              <th>Casa</th><th>Leads</th><th>Visitas agendadas</th><th>Visitas no mês</th><th>Compareceu</th><th>Faltou</th>
+              <th>Casa</th><th>Leads</th><th>Visitas agendadas</th><th>Visitas no mês</th><th>Viraram orçamento</th><th>Não viraram</th>
               <th>Orçamentos</th><th>Fechamentos</th><th>Sem orçamento</th><th>Fech. ÷ leads</th>
               <th>Sem dono</th><th>Dono fora da casa</th>
             </tr>
@@ -90,7 +89,8 @@ export default async function VisaoGeral({ searchParams }: { searchParams: Promi
       <p className="nota">
         Orçamentos e fechamentos contam quem entrou na etapa no mês, pelo histórico de movimentações.
         "Sem orçamento" é o fechamento que não passou por ORÇAMENTO/VISITA antes.
-        {semComparecimento && ' Compareceu e Faltou só aparecem nas casas que marcam o status do agendamento no GHL.'}
+        {' '}Visitas que viraram orçamento: o card do contato entrou em ORÇAMENTO/VISITA até 7 dias depois da visita.
+        "Não viraram" conta só visitas que já passaram.
       </p>
     </>
   )

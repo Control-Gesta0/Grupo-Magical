@@ -24,7 +24,7 @@ export default async function Casa({ params, searchParams }: {
       <div className="tabela">
         <table>
           <thead>
-            <tr><th>Vendedor</th><th>Leads</th><th>Visitas agendadas</th><th>Orçamentos</th><th>Fechamentos</th>
+            <tr><th>Vendedor</th><th>Leads</th><th>Visitas agendadas</th><th>Visitas que já passaram</th><th>Viraram orçamento</th><th>Orçamentos</th><th>Fechamentos</th>
               <th>Sem orçamento</th><th>Conversão</th><th>Abertas hoje</th></tr>
           </thead>
           <tbody>
@@ -34,7 +34,8 @@ export default async function Casa({ params, searchParams }: {
                   {v.nome ?? <span className="suave">Usuário removido</span>}
                   {!v.na_casa && <> <span className="alerta">não está mais na casa</span></>}
                 </td>
-                <td>{v.leads}</td><td>{v.agendados}</td><td>{v.orcamentos}</td><td>{v.fechamentos}</td>
+                <td>{v.leads}</td><td>{v.agendados}</td><td>{v.visitas}</td>
+                <td>{v.compareceu} <span className="suave">({pct(v.compareceu, v.visitas)})</span></td><td>{v.orcamentos}</td><td>{v.fechamentos}</td>
                 <td>{v.pulou ? <span className="alerta">{v.pulou}</span> : 0}</td>
                 <td>{pct(v.fechamentos, v.leads)}</td>
                 <td className={!v.na_casa && v.abertas ? 'ruim' : ''}>{v.abertas}</td>
@@ -43,7 +44,10 @@ export default async function Casa({ params, searchParams }: {
           </tbody>
         </table>
       </div>
-      <p className="nota">Orçamentos e fechamentos são atribuídos ao dono atual da oportunidade.</p>
+      <p className="nota">
+        Orçamentos e fechamentos são atribuídos ao dono atual da oportunidade. Visitas são as da agenda do vendedor
+        que já aconteceram no mês; "viraram orçamento" são as que levaram o card para ORÇAMENTO/VISITA.
+      </p>
 
       <h2>Fecharam sem passar por orçamento · {pularam.length}</h2>
       {pularam.length === 0 ? <p className="suave">Nenhum no mês.</p> : (

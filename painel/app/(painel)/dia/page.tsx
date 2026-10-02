@@ -28,8 +28,8 @@ export default async function Dia({ searchParams }: { searchParams: Promise<{ da
         <div className="cartao"><div className="r">Agendamentos feitos no dia</div>
           <div className={`v ${meta && t.agendados < meta ? 'ruim' : ''}`}>{t.agendados}{meta ? <small className="suave"> / meta {meta}</small> : null}</div></div>
         <div className="cartao"><div className="r">Visitas marcadas para o dia</div><div className="v">{t.visitas}</div></div>
-        <div className="cartao"><div className="r">Compareceram</div><div className="v">{t.realizadas}</div></div>
-        <div className="cartao"><div className="r">Faltaram</div><div className={`v ${t.faltas ? 'ruim' : ''}`}>{t.faltas}</div></div>
+        <div className="cartao"><div className="r">Viraram orçamento</div><div className="v">{t.realizadas}</div></div>
+        <div className="cartao"><div className="r">Ainda não viraram orçamento</div><div className={`v ${t.faltas ? 'ruim' : ''}`}>{t.faltas}</div></div>
         <div className="cartao"><div className="r">Canceladas</div><div className="v">{t.canceladas}</div></div>
       </div>
 
@@ -54,7 +54,7 @@ export default async function Dia({ searchParams }: { searchParams: Promise<{ da
       <h2>Por casa</h2>
       <div className="tabela">
         <table>
-          <thead><tr><th>Casa</th><th>Agendamentos feitos</th><th>Visitas do dia</th><th>Compareceu</th><th>Faltou</th><th>Cancelada</th></tr></thead>
+          <thead><tr><th>Casa</th><th>Agendamentos feitos</th><th>Visitas do dia</th><th>Viraram orçamento</th><th>Não viraram</th><th>Cancelada</th></tr></thead>
           <tbody>
             {casas.map(c => (
               <tr key={c.location_id}>
@@ -69,7 +69,10 @@ export default async function Dia({ searchParams }: { searchParams: Promise<{ da
           </tfoot>
         </table>
       </div>
-      <p className="nota">Compareceu e Faltou dependem de a equipe marcar o status do agendamento no GHL.</p>
+      <p className="nota">
+        Regra combinada com a Núbia: quem compareceu vira orçamento. A visita conta como realizada quando o card do contato
+        entra em ORÇAMENTO/VISITA até 7 dias depois; "não viraram" são visitas que já passaram sem essa mudança.
+      </p>
     </>
   )
 }
