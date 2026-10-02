@@ -153,10 +153,12 @@ export default async function Equipe({ searchParams }: { searchParams: Promise<{
 
       <h2>Transferir pessoa ou cards</h2>
       <form action={simular} className="cartao" style={{ display: 'grid', gap: 10, maxWidth: 640 }}>
-        <label>Cards de <select name="de" required>
+        <label>Cards de <select name="de" required defaultValue="">
+          <option value="" disabled>Escolha a pessoa</option>
           {comAcesso.concat(orfaos).map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
         </select></label>
-        <label>Vão para <select name="para" required>
+        <label>Vão para <select name="para" required defaultValue="">
+          <option value="" disabled>Escolha para quem</option>
           <option value="rodizio">O rodízio da equipe desta casa (divide igualmente)</option>
           {comAcesso.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
         </select></label>

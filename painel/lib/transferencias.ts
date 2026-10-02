@@ -33,6 +33,10 @@ export async function simularTransferencia(p: {
   lid: string; de: string; para: string; destinoCasa: string | null; incluirDescartados: boolean; usuario: string
 }) {
   await migrar()
+  if (!p.de || !p.para || p.de === p.para) throw new Error('escolha de quem saem os cards e para quem vão')
+  // clicar duas vezes em Simular não cria duas simulações iguais
+  await db()`update transferencias set status = 'cancelada'
+    where location_id = ${p.lid} and de = ${p.de} and para = ${p.para} and status = 'simulada'`
   const plano = await transferirCards(casaPorLid(p.lid), { de: p.de, para: p.para, incluirDescartados: p.incluirDescartados, simular: true })
   const [t] = await db()<{ id: number }[]>`
     insert into transferencias (location_id, de, para, destino_casa, incluir_descartados, status, plano, total, criado_por)
