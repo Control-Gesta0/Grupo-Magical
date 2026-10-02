@@ -8,6 +8,8 @@
 - Atribuição: rodízio igual por casa.
 - Atualização do painel: a cada hora (sincronização via API, sem webhook por enquanto).
 - Casa piloto do rodízio central: Casa Rei.
+- Comparecimento (Núbia): quem compareceu vira orçamento; o painel deduz a visita realizada pela entrada em ORÇAMENTO/VISITA até 7 dias depois.
+- Meta diária de agendamentos: fora por enquanto (era pontual). Se voltar, basta definir META_AGENDAMENTOS_DIA na Vercel.
 - Monte Belvedere: casa nova (por isso só tem oportunidades de setembro).
 - Hospedagem: conta Vercel da Control Gestão, Postgres pelo Marketplace da Vercel.
 
@@ -18,3 +20,7 @@
    com histórico de etapas recuperado do passado.
 2. Cadastro central de equipe + rodízio + redistribuição de órfãos (piloto Casa Rei, exige token com escrita).
 3. Bases de planejamento e decoração (uma linha de configuração por base).
+
+## Status (02/10/2026)
+- Painel no ar em grupo-magical-painel.vercel.app (telas Dia, Mês e Casa), cron horário ativo nas 12 contas.
+- Pendente com a Núbia/Evelin: regra de ganho/perdido, aviso × trava ao pular Orçamento, se card corrigido depois de pular conta como erro, e toda visita passar pela agenda do GHL.
