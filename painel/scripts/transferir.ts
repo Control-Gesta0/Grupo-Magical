@@ -79,7 +79,7 @@ async function main() {
   }
   for (const [etapa, m] of resumo) console.log(etapa.padEnd(32), [...m].map(([u, n]) => `${nome(u)}: ${n}`).join(' · '))
 
-  const csv = ['oportunidade;contato_id;etapa;novo_dono', ...plano.map(p => [p.o.name, p.o.contactId, p.etapa, nome(p.novo)].join(';'))]
+  const csv = ['oportunidade_id;oportunidade;contato_id;etapa;dono_anterior;novo_dono', ...plano.map(p => [p.o.id, p.o.name, p.o.contactId, p.etapa, de, p.novo].join(';'))]
   writeFileSync(`transferencia-${casa.casa}.csv`, csv.join('\n'))
   if (!aplicar) { console.log(`\nSIMULAÇÃO: nada foi alterado. Lista em transferencia-${casa.casa}.csv`); return }
 
