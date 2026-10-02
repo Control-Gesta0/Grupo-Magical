@@ -1,7 +1,7 @@
 # Painel de Gestão · Grupo Magical
 
 ## Decisões (02/10/2026)
-- Acesso inicial: só Núbia e Evelin (login simples; dados gravados por casa para abrir visão por gerente depois).
+- Acesso inicial: Núbia, Evelin e Rachel (login simples; dados gravados por casa para abrir visão por gerente depois).
 - Funil: as 11 casas de vendas seguem o mesmo padrão de 8 etapas; decoração e planejamento têm funil próprio.
 - Visitas: agendamentos no GHL (hoje nas agendas pessoais dos vendedores, não no calendário "Visita Marcada").
 - Usuários: mesmo ID em todas as subcontas; alguns atuam em várias casas.
