@@ -1,0 +1,4 @@
+# dados extraídos do GHL têm nomes, e-mails e telefones de clientes: nunca versionar
+raio-x/saida/
+.env
+__pycache__/
