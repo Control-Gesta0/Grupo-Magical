@@ -1,0 +1,148 @@
+{
+ "crons": [
+  {
+   "path": "/api/sync?i=0",
+   "schedule": "0 * * * *"
+  },
+  {
+   "path": "/api/sync?i=1",
+   "schedule": "1 * * * *"
+  },
+  {
+   "path": "/api/sync?i=2",
+   "schedule": "2 * * * *"
+  },
+  {
+   "path": "/api/sync?i=3",
+   "schedule": "3 * * * *"
+  },
+  {
+   "path": "/api/sync?i=4",
+   "schedule": "4 * * * *"
+  },
+  {
+   "path": "/api/sync?i=5",
+   "schedule": "5 * * * *"
+  },
+  {
+   "path": "/api/sync?i=6",
+   "schedule": "6 * * * *"
+  },
+  {
+   "path": "/api/sync?i=7",
+   "schedule": "7 * * * *"
+  },
+  {
+   "path": "/api/sync?i=8",
+   "schedule": "8 * * * *"
+  },
+  {
+   "path": "/api/sync?i=9",
+   "schedule": "9 * * * *"
+  },
+  {
+   "path": "/api/sync?i=10",
+   "schedule": "10 * * * *"
+  },
+  {
+   "path": "/api/sync?i=11",
+   "schedule": "11 * * * *"
+  },
+  {
+   "path": "/api/sync?i=12",
+   "schedule": "12 * * * *"
+  },
+  {
+   "path": "/api/sync?i=13",
+   "schedule": "13 * * * *"
+  },
+  {
+   "path": "/api/sync?i=14",
+   "schedule": "14 * * * *"
+  },
+  {
+   "path": "/api/sync?i=15",
+   "schedule": "15 * * * *"
+  },
+  {
+   "path": "/api/sync?i=16",
+   "schedule": "16 * * * *"
+  },
+  {
+   "path": "/api/sync?i=17",
+   "schedule": "17 * * * *"
+  },
+  {
+   "path": "/api/sync?i=18",
+   "schedule": "18 * * * *"
+  },
+  {
+   "path": "/api/sync?i=19",
+   "schedule": "19 * * * *"
+  },
+  {
+   "path": "/api/sync?i=20",
+   "schedule": "20 * * * *"
+  },
+  {
+   "path": "/api/sync?i=21",
+   "schedule": "21 * * * *"
+  },
+  {
+   "path": "/api/sync?i=22",
+   "schedule": "22 * * * *"
+  },
+  {
+   "path": "/api/sync?i=23",
+   "schedule": "23 * * * *"
+  },
+  {
+   "path": "/api/sync?i=24",
+   "schedule": "24 * * * *"
+  },
+  {
+   "path": "/api/sync?i=25",
+   "schedule": "25 * * * *"
+  },
+  {
+   "path": "/api/sync?i=26",
+   "schedule": "26 * * * *"
+  },
+  {
+   "path": "/api/sync?i=27",
+   "schedule": "27 * * * *"
+  },
+  {
+   "path": "/api/sync?i=28",
+   "schedule": "28 * * * *"
+  },
+  {
+   "path": "/api/sync?i=29",
+   "schedule": "29 * * * *"
+  },
+  {
+   "path": "/api/sync?i=30",
+   "schedule": "30 * * * *"
+  },
+  {
+   "path": "/api/sync?i=31",
+   "schedule": "31 * * * *"
+  },
+  {
+   "path": "/api/sync?i=32",
+   "schedule": "32 * * * *"
+  },
+  {
+   "path": "/api/sync?i=33",
+   "schedule": "33 * * * *"
+  },
+  {
+   "path": "/api/sync?i=34",
+   "schedule": "34 * * * *"
+  },
+  {
+   "path": "/api/sync?i=35",
+   "schedule": "35 * * * *"
+  }
+ ]
+}
