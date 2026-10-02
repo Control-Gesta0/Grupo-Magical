@@ -83,17 +83,7 @@ create index if not exists agendamentos_loc on agendamentos (location_id, inicio
 alter table agendamentos add column if not exists criado_por text;
 create index if not exists agendamentos_criado on agendamentos (criado_em);
 create index if not exists oportunidades_contato on oportunidades (location_id, contato_id);
--- Regra da Núbia: quem compareceu vira orçamento. A visita conta como realizada quando alguma
--- oportunidade do mesmo contato entra em ORÇAMENTO/VISITA entre o dia da visita e 7 dias depois.
-create or replace view visitas as
-select a.*, exists (
-  select 1 from oportunidades o join movimentos m on m.oportunidade_id = o.id
-  where o.location_id = a.location_id and o.contato_id = a.contato_id and m.chave_para = 'orcamento'
-    and m.em >= (date_trunc('day', a.inicio at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo')
-    and m.em < a.inicio + interval '7 days'
-) as virou_orcamento
-from agendamentos a
-where a.status is distinct from 'cancelled';
+drop view if exists visitas;
 create table if not exists sincronizacoes (
   id bigserial primary key,
   location_id text not null,

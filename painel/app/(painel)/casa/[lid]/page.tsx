@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { casa, fechamentosQuePularam, porVendedor } from '@/lib/metricas'
+import { casa, fechamentosQuePularam, periodoMes, porVendedor } from '@/lib/metricas'
 import { BASES, dataHora, mesValido, nomeMes, pct } from '@/lib/util'
 import { Filtros } from '../../Filtros'
 
@@ -12,7 +12,7 @@ export default async function Casa({ params, searchParams }: {
   const mes = mesValido((await searchParams).mes)
   const c = await casa(lid)
   if (!c) notFound()
-  const [vendedores, pularam] = await Promise.all([porVendedor(lid, mes), fechamentosQuePularam(lid, mes)])
+  const [vendedores, pularam] = await Promise.all([porVendedor(periodoMes(mes), { lid }), fechamentosQuePularam(lid, periodoMes(mes))])
 
   return (
     <>
@@ -24,8 +24,8 @@ export default async function Casa({ params, searchParams }: {
       <div className="tabela">
         <table>
           <thead>
-            <tr><th>Vendedor</th><th>Leads</th><th>Visitas agendadas</th><th>Visitas que já passaram</th><th>Viraram orçamento</th><th>Orçamentos</th><th>Fechamentos</th>
-              <th>Sem orçamento</th><th>Conversão</th><th>Abertas hoje</th></tr>
+            <tr><th>Vendedor</th><th>Leads</th><th>Agendamentos</th><th>Orçamentos</th><th>Fechamentos</th>
+              <th>Sem orçamento</th><th>Agend. → orç.</th><th>Abertas hoje</th></tr>
           </thead>
           <tbody>
             {vendedores.map(v => (
@@ -34,20 +34,16 @@ export default async function Casa({ params, searchParams }: {
                   {v.nome ?? <span className="suave">Usuário removido</span>}
                   {!v.na_casa && <> <span className="alerta">não está mais na casa</span></>}
                 </td>
-                <td>{v.leads}</td><td>{v.agendados}</td><td>{v.visitas}</td>
-                <td>{v.compareceu} <span className="suave">({pct(v.compareceu, v.visitas)})</span></td><td>{v.orcamentos}</td><td>{v.fechamentos}</td>
+                <td>{v.leads}</td><td>{v.agendamentos}</td><td>{v.orcamentos}</td><td>{v.fechamentos}</td>
                 <td>{v.pulou ? <span className="alerta">{v.pulou}</span> : 0}</td>
-                <td>{pct(v.fechamentos, v.leads)}</td>
+                <td>{pct(v.orcamentos, v.agendamentos)}</td>
                 <td className={!v.na_casa && v.abertas ? 'ruim' : ''}>{v.abertas}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="nota">
-        Orçamentos e fechamentos são atribuídos ao dono atual da oportunidade. Visitas são as da agenda do vendedor
-        que já aconteceram no mês; "viraram orçamento" são as que levaram o card para ORÇAMENTO/VISITA.
-      </p>
+      <p className="nota">Entradas nas etapas no mês, atribuídas ao dono atual do card.</p>
 
       <h2>Fecharam sem passar por orçamento · {pularam.length}</h2>
       {pularam.length === 0 ? <p className="suave">Nenhum no mês.</p> : (
