@@ -9,7 +9,7 @@
 - Atualização do painel: a cada hora (sincronização via API, sem webhook por enquanto).
 - Casa piloto do rodízio central: Casa Rei.
 - Monte Belvedere: casa nova (por isso só tem oportunidades de setembro).
-- Hospedagem: conta da Control Gestão (a confirmar: Vercel + Postgres).
+- Hospedagem: conta Vercel da Control Gestão, Postgres pelo Marketplace da Vercel.
 
 ## Fases
 0. Raio-X completo (falta Évora) + apresentação + 4 regras com a Núbia/Evelin
