@@ -32,8 +32,9 @@ export async function equipeDaCasa(lid: string, simulada: boolean): Promise<Memb
   return db()<Membro[]>`
     select e.usuario_id, u.nome, e.ativo,
       (select count(*) from atribuicoes a where a.location_id = e.location_id and a.usuario_id = e.usuario_id
-         and a.simulada = ${simulada} and a.em > now() - interval '7 days')::int as recebidos_7d,
-      (select max(em) from atribuicoes a where a.location_id = e.location_id and a.usuario_id = e.usuario_id and a.simulada = ${simulada}) as ultimo,
+         and a.simulada = ${simulada} and a.origem <> 'manual' and a.em > now() - interval '7 days')::int as recebidos_7d,
+      (select max(em) from atribuicoes a where a.location_id = e.location_id and a.usuario_id = e.usuario_id and a.simulada = ${simulada}
+         and a.origem <> 'manual') as ultimo,
       exists (select 1 from usuario_casa uc where uc.location_id = e.location_id and uc.usuario_id = e.usuario_id) as tem_acesso
     from equipe e left join usuarios u on u.id = e.usuario_id
     where e.location_id = ${lid}
@@ -88,12 +89,29 @@ export async function atribuirContato(casa: Casa, contatoId: string, origem = 'w
     select usuario_id from atribuicoes where location_id = ${lid} and contato_id = ${contatoId} and not simulada
       and usuario_id is not null and em > now() - interval '2 days' order by id limit 1`
 
-  const escolhido = anterior ? anterior.usuario_id : await sql.begin(async tx => {
+  // contato cadastrado à mão por alguém da casa (computador ou celular): fica com quem cadastrou, ou com o dono
+  // escolhido no cadastro, sem passar pela fila e sem tirar a vez de ninguém no rodízio
+  let manual: string | null = null
+  if (!anterior) {
+    const { contact } = await ghl<{ contact: any }>(`/contacts/${contatoId}`, casa.token)
+    const cb = contact?.createdBy
+    if (cb && (cb.source === 'WEB_USER' || cb.source === 'MOBILE_USER') && cb.sourceId) {
+      const [naEquipe] = await sql`select 1 from equipe where location_id = ${lid} and usuario_id = ${cb.sourceId}`
+      manual = contact.assignedTo || (naEquipe ? cb.sourceId : null)
+      if (manual) {
+        await sql`insert into atribuicoes (location_id, contato_id, usuario_id, origem, simulada, detalhe)
+          values (${lid}, ${contatoId}, ${manual}, 'manual', ${simulada}, ${sql.json({ criadoPor: cb.sourceId })})`
+      }
+    }
+  }
+
+  const escolhido = anterior ? anterior.usuario_id : manual ?? await sql.begin(async tx => {
     await tx`select pg_advisory_xact_lock(hashtext(${lid}))`
     const [e] = await tx<{ usuario_id: string }[]>`
       select e.usuario_id from equipe e
       left join lateral (select max(em) as ultimo from atribuicoes a
-        where a.location_id = e.location_id and a.usuario_id = e.usuario_id and a.simulada = ${simulada}) a on true
+        where a.location_id = e.location_id and a.usuario_id = e.usuario_id and a.simulada = ${simulada}
+          and a.origem <> 'manual') a on true
       where e.location_id = ${lid} and e.ativo
       order by a.ultimo nulls first, e.desde, e.usuario_id
       limit 1`
@@ -103,7 +121,7 @@ export async function atribuirContato(casa: Casa, contatoId: string, origem = 'w
     return e.usuario_id
   })
   if (!escolhido) return { ok: false, erro: 'nenhuma pessoa ativa na equipe desta casa' }
-  if (simulada) return { ok: true, simulada: true, usuario_id: escolhido }
+  if (simulada) return { ok: true, simulada: true, usuario_id: escolhido, manual: !!manual }
 
   await ghlGravar('PUT', `/contacts/${contatoId}`, casa.token, { assignedTo: escolhido })
   const membros = new Set((await sql<{ usuario_id: string }[]>`
@@ -123,7 +141,7 @@ export async function atribuirContato(casa: Casa, contatoId: string, origem = 'w
   for (const o of cards) await ghlGravar('PUT', `/opportunities/${o.id}`, casa.token, { assignedTo: escolhido })
   await sql`update atribuicoes set detalhe = ${sql.json({ cards: cards.map(o => o.id) })}
     where location_id = ${lid} and contato_id = ${contatoId} and simulada = false and origem = ${origem}`
-  return { ok: true, usuario_id: escolhido, cards: cards.length }
+  return { ok: true, usuario_id: escolhido, cards: cards.length, manual: !!manual }
 }
 
 export interface PlanoTransferencia {
