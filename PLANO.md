@@ -26,3 +26,5 @@
 - Pendente com a Núbia/Evelin: regra de ganho/perdido, aviso × trava ao pular Orçamento, se card corrigido depois de pular conta como erro, e toda visita passar pela agenda do GHL.
 - Fase 2 (02/10/2026): tela Equipe no ar. Casa Rei com rodízio ATIVO pelo painel (Alania, Ana Meloni, Bianca, Gessica); "Assign to user" removido do workflow Novo Lead e webhook /api/atribuir depois de "Criar ou atualizar oportunidade". Teste real: contato e card atribuídos à mesma vendedora. Sincronização horária atribui leads que ficarem sem dono.
 - Próximo: conferir a divisão na Casa Rei e repetir nas outras 10 casas (URLs do webhook por casa: /api/atribuir?casa=<locationId>&chave=<ATRIBUIR_SECRET>).
+- 03/10/2026: rodízio pelo painel ATIVO nas 10 casas de vendas com leads (Casa Rei, Chalé, Villa Cipresse, Chateau do Lago, Olegário, Casa do Lago, Lago Enfesta, Contemporâneo, Évora, Villa Fontana); "Assign to user" removido e webhook testado com contato real em cada uma. Monte Belvedere fica para quando voltar a receber leads.
+- Pendente: mensagem de WhatsApp do workflow Novo Lead da Villa Cipresse está sem template e sem número.
