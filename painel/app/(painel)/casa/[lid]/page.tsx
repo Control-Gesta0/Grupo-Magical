@@ -24,7 +24,7 @@ export default async function Casa({ params, searchParams }: {
       <div className="tabela">
         <table>
           <thead>
-            <tr><th>Vendedor</th><th>Leads</th><th>Agendamentos</th><th>Orçamentos</th><th>Fechamentos</th>
+            <tr><th>Vendedor</th><th>Leads</th><th>Agendamentos</th><th>Desfeitos</th><th>Orçamentos</th><th>Fechamentos</th>
               <th>Sem orçamento</th><th>Agend. → orç.</th><th>Abertas hoje</th></tr>
           </thead>
           <tbody>
@@ -34,7 +34,8 @@ export default async function Casa({ params, searchParams }: {
                   {v.nome ?? <span className="suave">Usuário removido</span>}
                   {!v.na_casa && <> <span className="alerta">não está mais na casa</span></>}
                 </td>
-                <td>{v.leads}</td><td>{v.agendamentos}</td><td>{v.orcamentos}</td><td>{v.fechamentos}</td>
+                <td>{v.leads}</td><td>{v.agendamentos}</td>
+                <td>{v.desfeitos ? <span className="alerta">{v.desfeitos}</span> : 0}</td><td>{v.orcamentos}</td><td>{v.fechamentos}</td>
                 <td>{v.pulou ? <span className="alerta">{v.pulou}</span> : 0}</td>
                 <td>{pct(v.orcamentos, v.agendamentos)}</td>
                 <td className={!v.na_casa && v.abertas ? 'ruim' : ''}>{v.abertas}</td>

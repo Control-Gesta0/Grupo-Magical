@@ -32,6 +32,21 @@ const BASE = ({ ini, duracao }: Periodo) => db()`
   fech as (
     select oportunidade_id, location_id, em, dono_id from entradas where chave = 'fechamento'
   ),
+  -- agendamento desfeito: entrou em AGENDAMENTO e, no mesmo dia, a mudança seguinte foi para trás ou para descartado
+  desfeitos as (
+    select x.oportunidade_id, x.location_id, x.em, x.dono_id, x.prox_em, x.prox_etapa
+    from (
+      select m.oportunidade_id, m.location_id, m.em, m.chave_para, coalesce(m.dono_na_hora, o.dono_id) as dono_id,
+        lead(m.em) over w as prox_em, lead(m.chave_para) over w as prox_chave, lead(m.etapa_para) over w as prox_etapa
+      from movimentos m join opp o on o.id = m.oportunidade_id
+      where m.tipo in ('opportunity_created', 'opportunity_stage_updated')
+        and m.oportunidade_id in (select oportunidade_id from entradas where chave = 'agendamento')
+      window w as (partition by m.oportunidade_id order by m.em)
+    ) x, p
+    where x.chave_para = 'agendamento' and x.em >= p.ini and x.em < p.fim
+      and x.prox_chave in ('novo_lead', 'ligacao', 'qualificacao', 'follow_up', 'descartado')
+      and (x.prox_em at time zone 'America/Sao_Paulo')::date = (x.em at time zone 'America/Sao_Paulo')::date
+  ),
   fech_class as (
     select f.*, exists (
       select 1 from movimentos m2 where m2.oportunidade_id = f.oportunidade_id
@@ -46,6 +61,7 @@ export interface LinhaCasa {
   base: string
   leads: number
   agendamentos: number
+  desfeitos: number
   orcamentos: number
   fechamentos: number
   pulou: number
@@ -65,6 +81,7 @@ export async function resumoCasas(periodo: Periodo, base: string): Promise<Linha
     select c.location_id, c.casa, c.nome, c.base,
       (select count(*) from opp, p where opp.location_id = c.location_id and opp.criado_em >= p.ini and opp.criado_em < p.fim)::int as leads,
       (select count(*) from entradas e where e.location_id = c.location_id and e.chave = 'agendamento')::int as agendamentos,
+      (select count(distinct d.oportunidade_id) from desfeitos d where d.location_id = c.location_id)::int as desfeitos,
       (select count(*) from entradas e where e.location_id = c.location_id and e.chave = 'orcamento')::int as orcamentos,
       (select count(*) from fech_class f where f.location_id = c.location_id)::int as fechamentos,
       (select count(*) from fech_class f where f.location_id = c.location_id and not f.passou)::int as pulou,
@@ -93,6 +110,7 @@ export interface LinhaVendedor {
   casa: string
   leads: number
   agendamentos: number
+  desfeitos: number
   orcamentos: number
   fechamentos: number
   pulou: number
@@ -119,6 +137,7 @@ export async function porVendedor(periodo: Periodo, filtro: { lid: string } | { 
       select d.dono_id, u.nome, d.location_id, c.nome as casa,
         (select count(*) from opp, p where opp.location_id = d.location_id and opp.dono_id = d.dono_id and opp.criado_em >= p.ini and opp.criado_em < p.fim)::int as leads,
         (select count(*) from entradas e where e.location_id = d.location_id and e.dono_id = d.dono_id and e.chave = 'agendamento')::int as agendamentos,
+        (select count(distinct x.oportunidade_id) from desfeitos x where x.location_id = d.location_id and x.dono_id = d.dono_id)::int as desfeitos,
         (select count(*) from entradas e where e.location_id = d.location_id and e.dono_id = d.dono_id and e.chave = 'orcamento')::int as orcamentos,
         (select count(*) from fech_class f where f.location_id = d.location_id and f.dono_id = d.dono_id)::int as fechamentos,
         (select count(*) from fech_class f where f.location_id = d.location_id and f.dono_id = d.dono_id and not f.passou)::int as pulou,
@@ -157,4 +176,27 @@ export async function casa(lid: string) {
   const [c] = await db()<{ location_id: string; casa: string; nome: string; base: string }[]>`
     select * from casas where location_id = ${lid}`
   return c ?? null
+}
+
+export interface AgendamentoDesfeito {
+  oportunidade_id: string
+  location_id: string
+  casa: string
+  card: string | null
+  vendedor: string | null
+  em: Date
+  prox_em: Date
+  prox_etapa: string | null
+}
+
+export async function agendamentosDesfeitos(periodo: Periodo, base: string): Promise<AgendamentoDesfeito[]> {
+  await migrar()
+  return db()<AgendamentoDesfeito[]>`
+    ${BASE(periodo)}
+    select d.oportunidade_id, d.location_id, c.nome as casa, o.nome as card, u.nome as vendedor, d.em, d.prox_em, d.prox_etapa
+    from desfeitos d join casas c on c.location_id = d.location_id
+      join opp o on o.id = d.oportunidade_id left join usuarios u on u.id = d.dono_id
+    where c.base = ${base}
+    order by d.em desc
+    limit 200`
 }

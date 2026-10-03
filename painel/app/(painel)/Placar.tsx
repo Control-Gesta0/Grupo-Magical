@@ -1,13 +1,15 @@
 import Link from 'next/link'
-import { porVendedor, resumoCasas, type LinhaCasa, type Periodo } from '@/lib/metricas'
+import { agendamentosDesfeitos, porVendedor, resumoCasas, type LinhaCasa, type Periodo } from '@/lib/metricas'
 import { dataHora, pct } from '@/lib/util'
 
-type Soma = Pick<LinhaCasa, 'leads' | 'agendamentos' | 'orcamentos' | 'fechamentos' | 'pulou' | 'sem_dono' | 'dono_fora' | 'historico_ok' | 'historico_total'>
-const CAMPOS: (keyof Soma)[] = ['leads', 'agendamentos', 'orcamentos', 'fechamentos', 'pulou', 'sem_dono', 'dono_fora', 'historico_ok', 'historico_total']
+type Soma = Pick<LinhaCasa, 'leads' | 'agendamentos' | 'desfeitos' | 'orcamentos' | 'fechamentos' | 'pulou' | 'sem_dono' | 'dono_fora' | 'historico_ok' | 'historico_total'>
+const CAMPOS: (keyof Soma)[] = ['leads', 'agendamentos', 'desfeitos', 'orcamentos', 'fechamentos', 'pulou', 'sem_dono', 'dono_fora', 'historico_ok', 'historico_total']
 
 /** Placar por casa e por vendedor. Serve à tela Dia e à tela Mês; só muda o período. */
 export async function Placar({ periodo, base, titulo, mes }: { periodo: Periodo; base: string; titulo: string; mes: string }) {
-  const [casas, vendedores] = await Promise.all([resumoCasas(periodo, base), porVendedor(periodo, { base })])
+  const [casas, vendedores, desfeitos] = await Promise.all([
+    resumoCasas(periodo, base), porVendedor(periodo, { base }), agendamentosDesfeitos(periodo, base),
+  ])
   if (casas.length === 0) {
     return <div className="aviso">Nenhuma conta desta base sincronizada ainda. A sincronização roda nos primeiros minutos de cada hora.</div>
   }
@@ -32,6 +34,8 @@ export async function Placar({ periodo, base, titulo, mes }: { periodo: Periodo;
       <div className="cartoes">
         <div className="cartao"><div className="r">Leads novos</div><div className="v">{t.leads}</div></div>
         <div className="cartao"><div className="r">Agendamentos</div><div className="v">{t.agendamentos}</div></div>
+        <div className="cartao"><div className="r">Agendamentos desfeitos no mesmo dia</div>
+          <div className={`v ${t.desfeitos ? 'ruim' : ''}`}>{t.desfeitos}</div></div>
         <div className="cartao"><div className="r">Orçamentos (foram à casa)</div><div className="v">{t.orcamentos}</div></div>
         <div className="cartao"><div className="r">Fechamentos</div><div className="v">{t.fechamentos}</div></div>
         <div className="cartao"><div className="r">Fecharam sem orçamento</div>
@@ -43,14 +47,15 @@ export async function Placar({ periodo, base, titulo, mes }: { periodo: Periodo;
       <h2>Por vendedor</h2>
       <div className="tabela">
         <table>
-          <thead><tr><th>Vendedor</th><th>Casa</th><th>Leads</th><th>Agendamentos</th><th>Orçamentos</th><th>Fechamentos</th><th>Sem orçamento</th></tr></thead>
+          <thead><tr><th>Vendedor</th><th>Casa</th><th>Leads</th><th>Agendamentos</th><th>Desfeitos</th><th>Orçamentos</th><th>Fechamentos</th><th>Sem orçamento</th></tr></thead>
           <tbody>
-            {ativos.length === 0 && <tr><td colSpan={7} className="suave">Nenhuma movimentação no período.</td></tr>}
+            {ativos.length === 0 && <tr><td colSpan={8} className="suave">Nenhuma movimentação no período.</td></tr>}
             {ativos.map(v => (
               <tr key={`${v.location_id}-${v.dono_id}`}>
                 <td>{v.nome ?? <span className="suave">Usuário removido</span>}{!v.na_casa && <> <span className="alerta">fora da casa</span></>}</td>
                 <td className="txt"><Link href={`/casa/${v.location_id}?mes=${mes}`}>{v.casa}</Link></td>
-                <td>{v.leads}</td><td><strong>{v.agendamentos}</strong></td><td>{v.orcamentos}</td><td>{v.fechamentos}</td>
+                <td>{v.leads}</td><td><strong>{v.agendamentos}</strong></td>
+                <td>{v.desfeitos ? <span className="alerta">{v.desfeitos}</span> : 0}</td><td>{v.orcamentos}</td><td>{v.fechamentos}</td>
                 <td>{v.pulou ? <span className="alerta">{v.pulou}</span> : 0}</td>
               </tr>
             ))}
@@ -61,6 +66,30 @@ export async function Placar({ periodo, base, titulo, mes }: { periodo: Periodo;
         Agendamentos, orçamentos e fechamentos contam os cards que entraram na etapa no período, pelo histórico do GHL,
         atribuídos a quem era dono do card quando ele mudou de etapa.
       </p>
+
+      {desfeitos.length > 0 && (
+        <>
+          <h2>Agendamentos desfeitos no mesmo dia · {desfeitos.length}</h2>
+          <div className="tabela">
+            <table>
+              <thead><tr><th>Card</th><th>Vendedor</th><th>Casa</th><th>Entrou em Agendamento</th><th>Saiu</th><th>Foi para</th></tr></thead>
+              <tbody>
+                {desfeitos.map(d => (
+                  <tr key={`${d.oportunidade_id}-${+new Date(d.em)}`}>
+                    <td className="txt">{d.card}</td><td>{d.vendedor ?? '–'}</td><td className="txt">{d.casa}</td>
+                    <td>{dataHora(d.em)}</td><td>{dataHora(d.prox_em)}</td>
+                    <td className="txt">{d.prox_etapa?.replace(/^\d+\.\s*/, '')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="nota">
+            Card que entrou em AGENDAMENTO e, no mesmo dia, voltou para uma etapa anterior ou foi descartado.
+            Pode ser cancelamento legítimo do cliente; vale conferir quando se repete com a mesma pessoa.
+          </p>
+        </>
+      )}
 
       <h2>Por casa</h2>
       <div className="tabela">
