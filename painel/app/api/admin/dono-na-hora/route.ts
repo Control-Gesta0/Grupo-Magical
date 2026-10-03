@@ -13,15 +13,22 @@ export async function POST(req: Request) {
   if (!process.env.CRON_SECRET || req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return Response.json({ erro: 'não autorizado' }, { status: 401 })
   }
+  try {
+    return Response.json(await aplicar(await req.json()))
+  } catch (e: any) {
+    return Response.json({ ok: false, erro: String(e?.message ?? e).slice(0, 300) }, { status: 500 })
+  }
+}
+
+async function aplicar({ itens = [], congelarRestante = false }: { itens?: any[]; congelarRestante?: boolean }) {
   await migrar()
   const sql = db()
-  const { itens = [], congelarRestante = false } = await req.json()
   let atualizados = 0
   for (let i = 0; i < itens.length; i += 500) {
     const lote = itens.slice(i, i + 500).map((x: any) => ({ id: String(x.id), dono: String(x.dono), ate: new Date(x.ate) }))
     const r = await sql`
       update movimentos m set dono_na_hora = v.dono
-      from (select * from json_to_recordset(${sql.json(lote as any)}) as t(id text, dono text, ate timestamptz)) v
+      from (select * from jsonb_to_recordset(${sql.json(lote as any)}) as t(id text, dono text, ate timestamptz)) v
       where m.oportunidade_id = v.id and m.em < v.ate and m.dono_na_hora is null`
     atualizados += r.count
   }
@@ -32,5 +39,5 @@ export async function POST(req: Request) {
       from oportunidades o where o.id = m.oportunidade_id and m.dono_na_hora is null and o.dono_id is not null`
     congelados = r.count
   }
-  return Response.json({ ok: true, atualizados, congelados })
+  return { ok: true, atualizados, congelados }
 }
