@@ -84,6 +84,7 @@ alter table agendamentos add column if not exists criado_por text;
 create index if not exists agendamentos_criado on agendamentos (criado_em);
 create index if not exists oportunidades_contato on oportunidades (location_id, contato_id);
 drop view if exists visitas;
+alter table movimentos add column if not exists dono_na_hora text;
 -- Fase 2: equipe e rodízio central
 create table if not exists equipe (
   location_id text not null,

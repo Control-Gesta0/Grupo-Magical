@@ -130,8 +130,8 @@ export async function sincronizarCasa(casa: Casa, ate: number): Promise<Resultad
 
     // histórico de etapas: vem das atividades da conversa; lê primeiro o que mudou mais recentemente
     let lidos = 0
-    const pendentes = await sql<{ id: string; contato_id: string }[]>`
-      select id, contato_id from oportunidades
+    const pendentes = await sql<{ id: string; contato_id: string; dono_id: string | null }[]>`
+      select id, contato_id, dono_id from oportunidades
       where location_id = ${lid} and contato_id is not null
         and (historico_lido_em is null or ultima_mudanca_etapa > historico_lido_em)
       order by ultima_mudanca_etapa desc nulls last, criado_em desc`
@@ -139,7 +139,7 @@ export async function sincronizarCasa(casa: Casa, ate: number): Promise<Resultad
     const trabalhador = async () => {
       while (fila.length && Date.now() < ate) {
         const op = fila.shift()!
-        await lerHistorico(lid, token, op.id, op.contato_id)
+        await lerHistorico(lid, token, op.id, op.contato_id, op.dono_id)
         lidos++
       }
     }
@@ -158,7 +158,9 @@ export async function sincronizarCasa(casa: Casa, ate: number): Promise<Resultad
   }
 }
 
-async function lerHistorico(lid: string, token: string, oppId: string, contatoId: string) {
+// dono_na_hora: quem era dono do card quando a mudança foi lida (até 1 hora depois dela). Assim uma
+// transferência posterior não leva junto os agendamentos e fechamentos que a pessoa anterior fez.
+async function lerHistorico(lid: string, token: string, oppId: string, contatoId: string, donoAtual: string | null) {
   const sql = db()
   const lidoEm = new Date()
   const { conversations = [] } = await ghl<{ conversations: any[] }>(
@@ -176,6 +178,7 @@ async function lerHistorico(lid: string, token: string, oppId: string, contatoId
           id: m.id, oportunidade_id: oppId, location_id: lid, em: m.dateAdded, tipo: a.type ?? null,
           etapa_de: a.data.stage?.oldStageName ?? null, etapa_para: a.data.stage?.newStageName ?? null,
           chave_para: chaveEtapa(a.data.stage?.newStageName), status: a.data.status ?? null,
+          dono_na_hora: donoAtual,
         })
       }
       if (!mm.nextPage || !mm.lastMessageId) break

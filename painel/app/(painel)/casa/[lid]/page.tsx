@@ -43,7 +43,7 @@ export default async function Casa({ params, searchParams }: {
           </tbody>
         </table>
       </div>
-      <p className="nota">Entradas nas etapas no mês, atribuídas ao dono atual do card.</p>
+      <p className="nota">Entradas nas etapas no mês, atribuídas a quem era dono do card quando ele mudou de etapa.</p>
 
       <h2>Fecharam sem passar por orçamento · {pularam.length}</h2>
       {pularam.length === 0 ? <p className="suave">Nenhum no mês.</p> : (

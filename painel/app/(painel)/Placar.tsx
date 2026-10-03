@@ -59,7 +59,7 @@ export async function Placar({ periodo, base, titulo, mes }: { periodo: Periodo;
       </div>
       <p className="nota">
         Agendamentos, orçamentos e fechamentos contam os cards que entraram na etapa no período, pelo histórico do GHL,
-        atribuídos ao dono atual do card.
+        atribuídos a quem era dono do card quando ele mudou de etapa.
       </p>
 
       <h2>Por casa</h2>

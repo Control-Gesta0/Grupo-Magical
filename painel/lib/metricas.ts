@@ -21,16 +21,16 @@ const BASE = ({ ini, duracao }: Periodo) => db()`
   ),
   funil as (select distinct pipeline_id from etapas where principal),
   opp as (select o.* from oportunidades o join funil f on f.pipeline_id = o.pipeline_id),
+  -- primeira entrada de cada card em cada etapa no período, com quem era dono naquele momento
   entradas as (
-    select distinct m.oportunidade_id, m.location_id, m.chave_para as chave
+    select distinct on (m.oportunidade_id, m.chave_para)
+      m.oportunidade_id, m.location_id, m.chave_para as chave, m.em, coalesce(m.dono_na_hora, o.dono_id) as dono_id
     from movimentos m join opp o on o.id = m.oportunidade_id, p
     where m.chave_para in ('agendamento', 'orcamento', 'fechamento') and m.em >= p.ini and m.em < p.fim
+    order by m.oportunidade_id, m.chave_para, m.em
   ),
   fech as (
-    select m.oportunidade_id, m.location_id, min(m.em) as em
-    from movimentos m join opp o on o.id = m.oportunidade_id, p
-    where m.chave_para = 'fechamento' and m.em >= p.ini and m.em < p.fim
-    group by 1, 2
+    select oportunidade_id, location_id, em, dono_id from entradas where chave = 'fechamento'
   ),
   fech_class as (
     select f.*, exists (
@@ -112,15 +112,16 @@ export async function porVendedor(periodo: Periodo, filtro: { lid: string } | { 
     ${BASE(periodo)},
     donos as (
       select distinct location_id, dono_id from opp where location_id in ${sql(lids)} and dono_id is not null
+      union select distinct location_id, dono_id from entradas where location_id in ${sql(lids)} and dono_id is not null
       union select location_id, usuario_id from usuario_casa where location_id in ${sql(lids)}
     )
     select * from (
       select d.dono_id, u.nome, d.location_id, c.nome as casa,
         (select count(*) from opp, p where opp.location_id = d.location_id and opp.dono_id = d.dono_id and opp.criado_em >= p.ini and opp.criado_em < p.fim)::int as leads,
-        (select count(*) from entradas e join opp o on o.id = e.oportunidade_id where e.location_id = d.location_id and o.dono_id = d.dono_id and e.chave = 'agendamento')::int as agendamentos,
-        (select count(*) from entradas e join opp o on o.id = e.oportunidade_id where e.location_id = d.location_id and o.dono_id = d.dono_id and e.chave = 'orcamento')::int as orcamentos,
-        (select count(*) from fech_class f join opp o on o.id = f.oportunidade_id where f.location_id = d.location_id and o.dono_id = d.dono_id)::int as fechamentos,
-        (select count(*) from fech_class f join opp o on o.id = f.oportunidade_id where f.location_id = d.location_id and o.dono_id = d.dono_id and not f.passou)::int as pulou,
+        (select count(*) from entradas e where e.location_id = d.location_id and e.dono_id = d.dono_id and e.chave = 'agendamento')::int as agendamentos,
+        (select count(*) from entradas e where e.location_id = d.location_id and e.dono_id = d.dono_id and e.chave = 'orcamento')::int as orcamentos,
+        (select count(*) from fech_class f where f.location_id = d.location_id and f.dono_id = d.dono_id)::int as fechamentos,
+        (select count(*) from fech_class f where f.location_id = d.location_id and f.dono_id = d.dono_id and not f.passou)::int as pulou,
         (select count(*) from opp left join etapas e on e.id = opp.etapa_id where opp.location_id = d.location_id and opp.dono_id = d.dono_id
            and opp.status = 'open' and e.chave is distinct from 'descartado')::int as abertas,
         exists (select 1 from usuario_casa uc where uc.location_id = d.location_id and uc.usuario_id = d.dono_id) as na_casa
