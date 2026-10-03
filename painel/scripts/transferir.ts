@@ -4,6 +4,7 @@
  *
  *   npm run transferir -- --casa=chateau-do-lago/vendas --de=<userId> --para=<id1,id2,...> \
  *     --etapas=qualificacao,follow_up,agendamento,orcamento,fechamento [--aplicar]
+ *   --etapas=todas move os cards abertos de qualquer funil (inclusive funis antigos).
  *
  * Sem --aplicar é simulação: não grava nada e salva a lista em transferencia-<casa>.csv.
  */
@@ -57,7 +58,7 @@ async function main() {
       ? `/opportunities/search?location_id=${lid}&assigned_to=${de}&status=open&limit=100&startAfter=${m.startAfter}&startAfterId=${m.startAfterId}`
       : null
   }
-  const alvo = cards.filter(o => o.assignedTo === de && etapas.has(chaveEtapa(etapaDe.get(o.pipelineStageId)) ?? ''))
+  const alvo = cards.filter(o => o.assignedTo === de && (etapas.has('todas') || etapas.has(chaveEtapa(etapaDe.get(o.pipelineStageId)) ?? '')))
 
   // rodízio dentro de cada etapa, do card mais recente para o mais antigo, para cada pessoa receber um mix igual
   const porEtapa = new Map<string, any[]>()
