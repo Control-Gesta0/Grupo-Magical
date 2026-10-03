@@ -83,7 +83,12 @@ export async function atribuirContato(casa: Casa, contatoId: string, origem = 'w
       and origem = ${origem} and em > now() - interval '1 day' limit 1`
   if (ja) return { ok: true, repetido: true, usuario_id: ja.usuario_id, simulada }
 
-  const escolhido = await sql.begin(async tx => {
+  // contato que o painel já atribuiu (ex.: o card ainda não existia na hora): reaproveita a escolha, sem girar a fila
+  const [anterior] = simulada ? [] : await sql<{ usuario_id: string }[]>`
+    select usuario_id from atribuicoes where location_id = ${lid} and contato_id = ${contatoId} and not simulada
+      and usuario_id is not null and em > now() - interval '2 days' order by id limit 1`
+
+  const escolhido = anterior ? anterior.usuario_id : await sql.begin(async tx => {
     await tx`select pg_advisory_xact_lock(hashtext(${lid}))`
     const [e] = await tx<{ usuario_id: string }[]>`
       select e.usuario_id from equipe e
@@ -103,8 +108,14 @@ export async function atribuirContato(casa: Casa, contatoId: string, origem = 'w
   await ghlGravar('PUT', `/contacts/${contatoId}`, casa.token, { assignedTo: escolhido })
   const membros = new Set((await sql<{ usuario_id: string }[]>`
     select usuario_id from equipe where location_id = ${lid} and ativo`).map(r => r.usuario_id))
-  const { opportunities = [] } = await ghl<{ opportunities: any[] }>(
-    `/opportunities/search?location_id=${lid}&contact_id=${contatoId}&status=open`, casa.token)
+  // o card criado no mesmo fluxo pode levar alguns segundos para aparecer na busca do GHL
+  let opportunities: any[] = []
+  for (let tentativa = 0; tentativa < 4; tentativa++) {
+    if (tentativa) await new Promise(r => setTimeout(r, 3000))
+    opportunities = (await ghl<{ opportunities: any[] }>(
+      `/opportunities/search?location_id=${lid}&contact_id=${contatoId}&status=open`, casa.token)).opportunities ?? []
+    if (opportunities.length) break
+  }
   // card sem dono, com dono fora da equipe, ou recém-criado neste mesmo fluxo (caso o "Assign to user" ainda esteja ligado)
   const recente = (o: any) => Date.now() - Date.parse(o.createdAt ?? 0) < 15 * 60_000
   const cards = opportunities.filter(o => o.assignedTo !== escolhido
