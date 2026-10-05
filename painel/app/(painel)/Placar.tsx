@@ -63,7 +63,7 @@ export async function Placar({ periodo, base, titulo, mes }: { periodo: Periodo;
         </table>
       </div>
       <p className="nota">
-        Agendamentos, orçamentos e fechamentos contam os cards que entraram na etapa no período, pelo histórico do GHL,
+        Agendamentos, orçamentos e fechamentos contam os cards que entraram na etapa no período, pelo histórico do CRM,
         atribuídos a quem era dono do card quando ele mudou de etapa.
       </p>
 

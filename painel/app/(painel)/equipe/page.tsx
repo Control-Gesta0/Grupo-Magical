@@ -12,7 +12,7 @@ import { dataHora, pct } from '@/lib/util'
 export const maxDuration = 300
 
 const MODOS: Record<Modo, string> = {
-  desligado: 'Desligado (o workflow do GHL atribui)',
+  desligado: 'Desligado (o workflow do CRM atribui)',
   simulacao: 'Simulação (o painel só registra quem receberia)',
   ativo: 'Ativo (o painel atribui de verdade)',
 }
@@ -117,7 +117,7 @@ export default async function Equipe({ searchParams }: { searchParams: Promise<{
             {equipe.length === 0 && <tr><td colSpan={5} className="suave">Ninguém na equipe ainda.</td></tr>}
             {equipe.map(m => (
               <tr key={m.usuario_id}>
-                <td>{m.nome ?? m.usuario_id}{!m.tem_acesso && <> <span className="alerta">sem acesso a esta conta no GHL</span></>}</td>
+                <td>{m.nome ?? m.usuario_id}{!m.tem_acesso && <> <span className="alerta">sem acesso a esta conta no CRM</span></>}</td>
                 <td>
                   <form action={alternar}>
                     <input type="hidden" name="usuario" value={m.usuario_id} />
@@ -171,7 +171,7 @@ export default async function Equipe({ searchParams }: { searchParams: Promise<{
       </form>
       <p className="nota">
         A transferência troca o dono do card e do contato, para quem recebe ver a conversa. Cards fechados (ganhos e perdidos)
-        ficam com a pessoa como histórico. O acesso à conta da casa nova continua sendo dado no GHL.
+        ficam com a pessoa como histórico. O acesso à conta da casa nova continua sendo dado no CRM.
       </p>
 
       {transferencias.length > 0 && <h2>Transferências</h2>}

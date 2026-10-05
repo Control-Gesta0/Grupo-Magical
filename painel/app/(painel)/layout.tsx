@@ -16,12 +16,16 @@ export default async function Painel({ children }: { children: ReactNode }) {
   return (
     <>
       <header className="topo">
-        <h1><Link href="/">Painel de Gestão · Grupo Magical</Link></h1>
+        <Link href="/" className="marca">
+          <img src="/logo-negativo.png" alt="Control Gestão" />
+          <span>Painel de Gestão · Grupo Magical</span>
+        </Link>
         <nav className="abas"><Link href="/dia">Dia</Link><Link href="/">Mês</Link><Link href="/equipe">Equipe</Link></nav>
-        <span className="suave">{u.nome}</span>
+        <span className="quem">{u.nome}</span>
         <form action={acaoSair}><button type="submit">Sair</button></form>
       </header>
       <main>{children}</main>
+      <footer className="rodape">Control Gestão</footer>
     </>
   )
 }
