@@ -15,7 +15,7 @@ export default async function Dia({ searchParams }: { searchParams: Promise<{ da
         </select>
         <button type="submit">Ver</button>
       </form>
-      <Placar periodo={periodoDia(data)} base={base} mes={data.slice(0, 7)} titulo={`${nomeDia(data)} · ${BASES[base]}`} />
+      <Placar periodo={periodoDia(data)} base={base} qs={`de=${data}&ate=${data}`} titulo={`${nomeDia(data)} · ${BASES[base]}`} />
     </>
   )
 }

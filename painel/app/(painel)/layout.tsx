@@ -20,7 +20,10 @@ export default async function Painel({ children }: { children: ReactNode }) {
           <img src="/logo-negativo.png" alt="Control Gestão" />
           <span>Painel de Gestão · Grupo Magical</span>
         </Link>
-        <nav className="abas"><Link href="/dia">Dia</Link><Link href="/">Mês</Link><Link href="/equipe">Equipe</Link></nav>
+        <nav className="abas">
+          <Link href="/dia">Dia</Link><Link href="/">Mês</Link><Link href="/periodo">Período</Link><Link href="/equipe">Equipe</Link>
+          {u.admin && <Link href="/transferencias">Transferências</Link>}
+        </nav>
         <span className="quem">{u.nome}</span>
         <form action={acaoSair}><button type="submit">Sair</button></form>
       </header>

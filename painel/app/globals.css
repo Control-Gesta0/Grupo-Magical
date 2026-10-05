@@ -63,6 +63,7 @@ td button:hover, td form button[type="submit"]:hover { background: var(--nevoa);
 .cartoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .cartao { background: var(--card); border: 1px solid var(--linha); border-top: 3px solid var(--azul); border-radius: 8px; padding: 14px; }
 .cartao .r { color: var(--suave); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.cartao .s { font-size: 12px; margin-top: 2px; }
 .cartao .v { font-size: 26px; font-weight: 700; color: var(--destaque); font-variant-numeric: lining-nums tabular-nums; }
 @media (prefers-color-scheme: dark) { .cartao { border-top-color: var(--laranja); } }
 

@@ -1,4 +1,5 @@
 import { db, migrar } from './db'
+import { somarDias, somarMeses } from './util'
 
 /**
  * Tudo aqui conta ENTRADAS em etapa, pelo histórico de movimentações, como a Núbia mede:
@@ -7,17 +8,23 @@ import { db, migrar } from './db'
  */
 export interface Periodo {
   ini: string // AAAA-MM-DD, horário de São Paulo
-  duracao: '1 day' | '1 month'
+  fim: string // AAAA-MM-DD, exclusivo (o dia seguinte ao último)
 }
 
-export const periodoMes = (mes: string): Periodo => ({ ini: `${mes}-01`, duracao: '1 month' })
-export const periodoDia = (data: string): Periodo => ({ ini: data, duracao: '1 day' })
+export const periodoMes = (mes: string): Periodo => ({ ini: `${mes}-01`, fim: somarMeses(`${mes}-01`, 1) })
+export const periodoDia = (data: string): Periodo => ({ ini: data, fim: somarDias(data, 1) })
+/** De `de` até `ate`, os dois dias inclusive. */
+export const periodoIntervalo = (de: string, ate: string): Periodo => ({ ini: de, fim: somarDias(ate, 1) })
+/** As mesmas datas um mês antes (1 a 5 de outubro → 1 a 5 de setembro). */
+export const periodoAnterior = (p: Periodo): Periodo => ({ ini: somarMeses(p.ini, -1), fim: somarMeses(p.fim, -1) })
 
 // Fechamento "pulou" = primeira entrada em FECHAMENTO no período sem nenhuma passagem por ORÇAMENTO/VISITA antes dela.
-const BASE = ({ ini, duracao }: Periodo) => db()`
+// Orçamento "sem agendamento" = entrada em ORÇAMENTO/VISITA sem nenhuma passagem por AGENDAMENTO antes dela
+// (o vendedor marcou a visita mas deixou o card em qualificação).
+const BASE = ({ ini, fim }: Periodo) => db()`
   with p as (
     select (${ini}::timestamp at time zone 'America/Sao_Paulo') as ini,
-           ((${ini}::timestamp + ${duracao}::interval) at time zone 'America/Sao_Paulo') as fim
+           (${fim}::timestamp at time zone 'America/Sao_Paulo') as fim
   ),
   funil as (select distinct pipeline_id from etapas where principal),
   opp as (select o.* from oportunidades o join funil f on f.pipeline_id = o.pipeline_id),
@@ -52,6 +59,12 @@ const BASE = ({ ini, duracao }: Periodo) => db()`
       select 1 from movimentos m2 where m2.oportunidade_id = f.oportunidade_id
         and m2.chave_para = 'orcamento' and m2.em <= f.em) as passou
     from fech f
+  ),
+  orc_class as (
+    select e.oportunidade_id, e.location_id, e.em, e.dono_id, exists (
+      select 1 from movimentos m2 where m2.oportunidade_id = e.oportunidade_id
+        and m2.chave_para = 'agendamento' and m2.em <= e.em) as passou
+    from entradas e where e.chave = 'orcamento'
   )`
 
 export interface LinhaCasa {
@@ -65,6 +78,7 @@ export interface LinhaCasa {
   orcamentos: number
   fechamentos: number
   pulou: number
+  orc_sem: number
   sem_dono: number
   dono_fora: number
   historico_ok: number
@@ -85,6 +99,7 @@ export async function resumoCasas(periodo: Periodo, base: string): Promise<Linha
       (select count(*) from entradas e where e.location_id = c.location_id and e.chave = 'orcamento')::int as orcamentos,
       (select count(*) from fech_class f where f.location_id = c.location_id)::int as fechamentos,
       (select count(*) from fech_class f where f.location_id = c.location_id and not f.passou)::int as pulou,
+      (select count(*) from orc_class o where o.location_id = c.location_id and not o.passou)::int as orc_sem,
       (select count(*) from opp left join etapas e on e.id = opp.etapa_id
          where opp.location_id = c.location_id and opp.status = 'open' and opp.dono_id is null
            and e.chave is distinct from 'descartado')::int as sem_dono,
@@ -114,6 +129,7 @@ export interface LinhaVendedor {
   orcamentos: number
   fechamentos: number
   pulou: number
+  orc_sem: number
   abertas: number
   na_casa: boolean
 }
@@ -141,6 +157,7 @@ export async function porVendedor(periodo: Periodo, filtro: { lid: string } | { 
         (select count(*) from entradas e where e.location_id = d.location_id and e.dono_id = d.dono_id and e.chave = 'orcamento')::int as orcamentos,
         (select count(*) from fech_class f where f.location_id = d.location_id and f.dono_id = d.dono_id)::int as fechamentos,
         (select count(*) from fech_class f where f.location_id = d.location_id and f.dono_id = d.dono_id and not f.passou)::int as pulou,
+        (select count(*) from orc_class o where o.location_id = d.location_id and o.dono_id = d.dono_id and not o.passou)::int as orc_sem,
         (select count(*) from opp left join etapas e on e.id = opp.etapa_id where opp.location_id = d.location_id and opp.dono_id = d.dono_id
            and opp.status = 'open' and e.chave is distinct from 'descartado')::int as abertas,
         exists (select 1 from usuario_casa uc where uc.location_id = d.location_id and uc.usuario_id = d.dono_id) as na_casa
@@ -158,15 +175,17 @@ export interface FechamentoPulou {
   caminho: string | null
 }
 
-export async function fechamentosQuePularam(lid: string, periodo: Periodo): Promise<FechamentoPulou[]> {
+/** Cards que pularam etapa: fechamento sem orçamento antes, ou orçamento sem agendamento antes. */
+export async function quePularam(lid: string, periodo: Periodo, tipo: 'fechamento' | 'orcamento'): Promise<FechamentoPulou[]> {
   await migrar()
   const sql = db()
+  const origem = tipo === 'fechamento' ? sql`fech_class` : sql`orc_class`
   return sql<FechamentoPulou[]>`
     ${BASE(periodo)}
     select o.id, o.nome, u.nome as dono, f.em,
       (select string_agg(coalesce(m.etapa_para, '?'), ' → ' order by m.em) from movimentos m
          where m.oportunidade_id = o.id and m.tipo in ('opportunity_created', 'opportunity_stage_updated')) as caminho
-    from fech_class f join opp o on o.id = f.oportunidade_id left join usuarios u on u.id = o.dono_id
+    from ${origem} f join opp o on o.id = f.oportunidade_id left join usuarios u on u.id = f.dono_id
     where f.location_id = ${lid} and not f.passou
     order by f.em desc`
 }

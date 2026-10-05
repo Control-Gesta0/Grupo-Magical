@@ -4,7 +4,10 @@ import { cookies } from 'next/headers'
 const COOKIE = 'painel_sessao'
 const DURACAO = 7 * 24 * 3600
 
-interface Usuario { email: string; nome: string; senha: string }
+/** admin: tudo, inclusive transferir cards. gestor (padrão): tudo menos transferências. */
+type Perfil = 'admin' | 'gestor'
+interface Usuario { email: string; nome: string; senha: string; perfil?: Perfil }
+export interface Sessao { email: string; nome: string; admin: boolean }
 
 function usuarios(): Usuario[] {
   return JSON.parse(process.env.PAINEL_USUARIOS || '[]')
@@ -45,7 +48,7 @@ export async function sair() {
   ;(await cookies()).delete(COOKIE)
 }
 
-export async function usuarioAtual(): Promise<{ email: string; nome: string } | null> {
+export async function usuarioAtual(): Promise<Sessao | null> {
   const bruto = (await cookies()).get(COOKIE)?.value
   if (!bruto) return null
   const [email, exp, assinatura] = bruto.split('|')
@@ -53,5 +56,5 @@ export async function usuarioAtual(): Promise<{ email: string; nome: string } | 
   const a = Buffer.from(assinatura ?? '', 'hex'), b = Buffer.from(assinar(valor), 'hex')
   if (a.length !== b.length || !timingSafeEqual(a, b) || Number(exp) * 1000 < Date.now()) return null
   const u = usuarios().find(x => x.email === email)
-  return u ? { email: u.email, nome: u.nome } : null
+  return u ? { email: u.email, nome: u.nome, admin: u.perfil === 'admin' } : null
 }

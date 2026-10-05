@@ -44,3 +44,28 @@ export function nomeDia(d: string) {
   const s = new Date(Date.UTC(a, m - 1, dd, 12)).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', timeZone: 'UTC' })
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
+
+/** Soma dias a uma data AAAA-MM-DD. */
+export function somarDias(d: string, n: number) {
+  const [a, m, dd] = d.split('-').map(Number)
+  return new Date(Date.UTC(a, m - 1, dd + n)).toISOString().slice(0, 10)
+}
+
+/** Soma meses mantendo o dia (31 vira o último dia do mês quando ele é mais curto). */
+export function somarMeses(d: string, n: number) {
+  const [a, m, dd] = d.split('-').map(Number)
+  const ultimo = new Date(Date.UTC(a, m - 1 + n + 1, 0)).getUTCDate()
+  return new Date(Date.UTC(a, m - 1 + n, Math.min(dd, ultimo))).toISOString().slice(0, 10)
+}
+
+export function dataCurta(d: string) {
+  const [a, m, dd] = d.split('-')
+  return `${dd}/${m}/${a}`
+}
+
+/** Variação contra o período anterior, como "+12%" ou "–5%". */
+export function variacao(atual: number, antes: number) {
+  if (!antes) return atual ? 'novo' : '–'
+  const v = Math.round(((atual - antes) / antes) * 100)
+  return `${v > 0 ? '+' : v < 0 ? '–' : ''}${Math.abs(v)}%`
+}
