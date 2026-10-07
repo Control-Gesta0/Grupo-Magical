@@ -20,6 +20,13 @@ export async function GET(req: Request) {
   if (!ids.length) return Response.json({ usuarios })
   const desde = sql`now() - make_interval(days => ${dias})`
 
+  // cards da casa que mudaram de etapa no período: o histórico foi lido e achou movimentação?
+  const mudaram = await sql`
+    select o.id, o.nome, o.ultima_mudanca_etapa, o.historico_lido_em, e.nome as etapa, u.nome as dono,
+      (select count(*) from movimentos m where m.oportunidade_id = o.id and m.em > ${desde})::int as movimentos
+    from oportunidades o left join etapas e on e.id = o.etapa_id left join usuarios u on u.id = o.dono_id
+    where o.location_id = ${lid} and o.ultima_mudanca_etapa > ${desde}
+    order by o.ultima_mudanca_etapa desc limit 40`
   const [cardsPorEtapa, entradas, agendamentosNoCardDeOutro, semHistorico, sync, funis] = await Promise.all([
     // cards da pessoa hoje, por funil e etapa
     sql`select e.pipeline_nome, e.principal, e.nome as etapa, e.chave, o.status, count(*)::int as n
@@ -46,5 +53,5 @@ export async function GET(req: Request) {
     sql`select inicio, fim, ok, detalhe from sincronizacoes where location_id = ${lid} order by id desc limit 2`,
     sql`select distinct pipeline_id, pipeline_nome, principal from etapas where location_id = ${lid}`,
   ])
-  return Response.json({ usuarios, funis, cardsPorEtapa, entradas, agendamentosNoCardDeOutro, semHistorico, sync })
+  return Response.json({ usuarios, mudaram, funis, cardsPorEtapa, entradas, agendamentosNoCardDeOutro, semHistorico, sync })
 }
