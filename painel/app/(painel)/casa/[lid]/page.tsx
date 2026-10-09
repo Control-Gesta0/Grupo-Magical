@@ -46,6 +46,7 @@ export default async function Casa({ params, searchParams }: {
                 <td>
                   {v.nome ?? <span className="suave">Usuário removido</span>}
                   {!v.na_casa && <> <span className="alerta">não está mais na casa</span></>}
+                  {v.pausado && <> <span className="etiqueta">pausado</span></>}
                 </td>
                 <td>{v.leads}</td><td>{v.agendamentos}</td><td>{real(v)}</td><td>{pct(real(v), v.leads)}</td>
                 <td>{v.desfeitos ? <span className="alerta">{v.desfeitos}</span> : 0}</td>

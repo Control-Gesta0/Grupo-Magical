@@ -85,7 +85,7 @@ export async function Placar({ periodo, anterior, base, titulo, qs }: {
             {ativos.length === 0 && <tr><td colSpan={13} className="suave">Ninguém no rodízio e nenhuma movimentação no período.</td></tr>}
             {ativos.map(v => (
               <tr key={`${v.location_id}-${v.dono_id}`}>
-                <td>{v.nome ?? <span className="suave">Usuário removido</span>}{!v.na_casa && <> <span className="alerta">fora da casa</span></>}</td>
+                <td>{v.nome ?? <span className="suave">Usuário removido</span>}{!v.na_casa && <> <span className="alerta">fora da casa</span></>}{v.pausado && <> <span className="etiqueta">pausado</span></>}</td>
                 <td className="txt"><Link href={`/casa/${v.location_id}?${qs}`}>{v.casa}</Link></td>
                 <td>{v.leads}</td><td><strong>{v.agendamentos}</strong></td><td>{real(v)}</td><td>{pct(real(v), v.leads)}</td>
                 <td>{v.desfeitos ? <span className="alerta">{v.desfeitos}</span> : 0}</td>
