@@ -39,7 +39,8 @@ export async function Placar({ periodo, anterior, base, titulo, qs }: {
   const a = casasAntes ? somar(casasAntes) : null
   const syncs = casas.map(l => l.ultima_sync).filter(Boolean) as Date[]
   const falhas = casas.filter(l => l.sync_ok === false)
-  const ativos = vendedores.filter(v => v.agendamentos + v.orcamentos + v.fechamentos + v.leads > 0)
+  // todo o rodízio de cada casa aparece, mesmo zerado; fora dele, só quem teve movimentação no período
+  const ativos = vendedores.filter(v => v.na_equipe || v.agendamentos + v.orcamentos + v.fechamentos + v.leads > 0)
 
   return (
     <>
@@ -81,7 +82,7 @@ export async function Placar({ periodo, anterior, base, titulo, qs }: {
               <th>Orçamentos</th><th>% orç.</th><th>Orç. sem agend.</th><th>Fechamentos</th><th>% fech.</th><th>Fech. sem orç.</th></tr>
           </thead>
           <tbody>
-            {ativos.length === 0 && <tr><td colSpan={13} className="suave">Nenhuma movimentação no período.</td></tr>}
+            {ativos.length === 0 && <tr><td colSpan={13} className="suave">Ninguém no rodízio e nenhuma movimentação no período.</td></tr>}
             {ativos.map(v => (
               <tr key={`${v.location_id}-${v.dono_id}`}>
                 <td>{v.nome ?? <span className="suave">Usuário removido</span>}{!v.na_casa && <> <span className="alerta">fora da casa</span></>}</td>

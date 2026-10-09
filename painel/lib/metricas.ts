@@ -132,6 +132,7 @@ export interface LinhaVendedor {
   orc_sem: number
   abertas: number
   na_casa: boolean
+  na_equipe: boolean
 }
 
 /** Placar por vendedor (dono atual da oportunidade). Sem `lid`, traz todas as casas da base. */
@@ -160,10 +161,11 @@ export async function porVendedor(periodo: Periodo, filtro: { lid: string } | { 
         (select count(*) from orc_class o where o.location_id = d.location_id and o.dono_id = d.dono_id and not o.passou)::int as orc_sem,
         (select count(*) from opp left join etapas e on e.id = opp.etapa_id where opp.location_id = d.location_id and opp.dono_id = d.dono_id
            and opp.status = 'open' and e.chave is distinct from 'descartado')::int as abertas,
-        exists (select 1 from usuario_casa uc where uc.location_id = d.location_id and uc.usuario_id = d.dono_id) as na_casa
+        exists (select 1 from usuario_casa uc where uc.location_id = d.location_id and uc.usuario_id = d.dono_id) as na_casa,
+        exists (select 1 from equipe eq where eq.location_id = d.location_id and eq.usuario_id = d.dono_id) as na_equipe
       from donos d join casas c on c.location_id = d.location_id left join usuarios u on u.id = d.dono_id
     ) x
-    where leads + agendamentos + orcamentos + fechamentos + abertas > 0
+    where na_equipe or leads + agendamentos + orcamentos + fechamentos + abertas > 0
     order by agendamentos desc, orcamentos desc, fechamentos desc, leads desc, nome`
 }
 
