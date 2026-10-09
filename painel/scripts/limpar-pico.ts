@@ -1,13 +1,14 @@
 /**
  * Limpa um cadastro em massa. Quando o WhatsApp de uma casa é reconectado, as conversas antigas do celular
  * viram contatos novos no GHL e cada um entra no workflow "Novo Lead" (card em NOVO LEAD + rodízio).
- * O script acha sozinho o pico de cards criados quase ao mesmo tempo e, dos que continuam em NOVO LEAD,
- * tira o contato do workflow "Novo Lead", apaga o card e apaga a atribuição do rodízio no painel.
- * O contato e a conversa continuam no GHL. Card do pico que alguém já mexeu fica como está.
+ * O script acha sozinho o pico de contatos criados quase ao mesmo tempo e, dos cards deles que continuam em
+ * NOVO LEAD, tira o contato do workflow "Novo Lead", apaga o card e apaga a atribuição do rodízio no painel.
+ * O contato e a conversa continuam no GHL (apagado, o contato pode voltar na próxima sincronização do WhatsApp
+ * e disparar o workflow de novo). Card do pico que alguém já mexeu fica como está.
  *
  *   npm run limpar-pico -- --casa=fontana [--dias=3] [--intervalo=120] [--de=<ISO> --ate=<ISO>] [--workflow=<id>] [--aplicar]
  *
- * --intervalo: segundos sem card novo que encerram o pico. --de/--ate: janela fixa em vez de detectar.
+ * --intervalo: segundos sem contato novo que encerram o pico. --de/--ate: janela fixa (criação do contato).
  * Sem --aplicar é simulação: não grava nada e salva a lista em limpeza-<casa>.csv. Pode ser repetido.
  */
 import { writeFileSync } from 'node:fs'
@@ -83,42 +84,51 @@ async function main() {
   }
   const criado = (o: any) => Date.parse(o.createdAt)
 
-  // o pico: cards seguidos com menos de --intervalo segundos entre um e outro; vale o maior grupo do período
+  // o cadastro em massa aparece na criação do CONTATO (todos no mesmo minuto); o card pode sair minutos depois,
+  // porque o workflow processa a fila aos poucos, e no meio dela pode cair um lead de verdade
   const dias = Number(arg('dias') ?? 3), intervalo = Number(arg('intervalo') ?? 120) * 1000
-  let ini: number, fim: number, outros: any[][] = []
+  const recentes = [...new Set(opps.filter(o => o.contactId && criado(o) > Date.now() - dias * DIA).map(o => o.contactId as string))]
+  console.log(`Lendo a data de criação de ${recentes.length} contatos com card nos últimos ${dias} dias...`)
+  const criadoContato = new Map<string, number>()
+  const errosLeitura = await emParalelo(recentes, async c => {
+    const { contact } = await ghl('GET', `/contacts/${c}`, token)
+    if (contact?.dateAdded) criadoContato.set(c, Date.parse(contact.dateAdded))
+  })
+  if (errosLeitura) console.log(`  ${errosLeitura} contatos não puderam ser lidos e ficaram de fora`)
+
+  // o pico: contatos criados com menos de --intervalo segundos entre um e outro; vale o maior grupo do período
+  let ini: number, fim: number, outros: number[][] = []
   if (arg('de') && arg('ate')) {
     ini = Date.parse(arg('de')!); fim = Date.parse(arg('ate')!)
-    if (Number.isNaN(ini) || Number.isNaN(fim)) throw new Error('--de/--ate precisam ser datas ISO (ex.: 2026-10-09T11:00:00Z)')
+    if (Number.isNaN(ini) || Number.isNaN(fim)) throw new Error('--de/--ate precisam ser datas ISO (ex.: 2026-10-09T14:46:00Z)')
   } else {
-    const recentes = opps.filter(o => criado(o) > Date.now() - dias * DIA).sort((a, b) => criado(a) - criado(b))
-    const grupos: any[][] = []
-    for (const o of recentes) {
+    const grupos: number[][] = []
+    for (const t of [...criadoContato.values()].sort((a, b) => a - b)) {
       const g = grupos.at(-1)
-      if (g && criado(o) - criado(g.at(-1)) <= intervalo) g.push(o)
-      else grupos.push([o])
+      if (g && t - g.at(-1)! <= intervalo) g.push(t)
+      else grupos.push([t])
     }
     grupos.sort((a, b) => b.length - a.length)
     const maior = grupos[0] ?? []
-    if (maior.length < 50) throw new Error(`nenhum cadastro em massa nos últimos ${dias} dias (maior grupo: ${maior.length} cards)`)
-    ini = criado(maior[0]); fim = criado(maior.at(-1))
+    if (maior.length < 50) throw new Error(`nenhum cadastro em massa nos últimos ${dias} dias (maior grupo: ${maior.length} contatos)`)
+    ini = maior[0]; fim = maior.at(-1)!
     outros = grupos.slice(1).filter(g => g.length >= 50)
   }
 
-  const noPico = opps.filter(o => criado(o) >= ini && criado(o) <= fim)
+  const contatosDoPico = new Set([...criadoContato].filter(([, t]) => t >= ini && t <= fim).map(([c]) => c))
+  const noPico = opps.filter(o => contatosDoPico.has(o.contactId))
   const apagar = noPico.filter(o => o.status === 'open' && emNovoLead(o))
   const manter = noPico.filter(o => !apagar.includes(o))
-  // card antigo que o "Criar ou atualizar oportunidade" pode ter puxado de volta para NOVO LEAD durante o pico
-  const voltaram = opps.filter(o => criado(o) < ini && emNovoLead(o) && o.lastStageChangeAt
-    && Date.parse(o.lastStageChangeAt) >= ini && Date.parse(o.lastStageChangeAt) <= fim + 15 * MIN)
-  // quantos leads de verdade a casa costuma receber num intervalo desse tamanho (média das 2 semanas antes)
-  const normais = opps.filter(o => criado(o) >= ini - 14 * DIA && criado(o) < ini).length
-  const esperados = (normais / (14 * DIA)) * (fim - ini)
+  // card antigo que o "Criar ou atualizar oportunidade" pode ter puxado de volta para NOVO LEAD depois do pico
+  const voltaram = opps.filter(o => !contatosDoPico.has(o.contactId) && criado(o) < ini && emNovoLead(o) && o.lastStageChangeAt
+    && Date.parse(o.lastStageChangeAt) >= ini && Date.parse(o.lastStageChangeAt) <= fim + 120 * MIN)
 
   const porDono = new Map<string, number>()
   for (const o of apagar) porDono.set(nomeUsuario(o.assignedTo), (porDono.get(nomeUsuario(o.assignedTo)) ?? 0) + 1)
-  console.log(`${casa.nome}: pico de ${noPico.length} cards entre ${dataHora(new Date(ini))} e ${dataHora(new Date(fim))} (${Math.round((fim - ini) / MIN)} min)`)
-  console.log(`Fora do pico a casa recebe em média ${esperados.toFixed(1).replace('.', ',')} lead num intervalo desse tamanho.`)
-  for (const g of outros) console.log(`Outro grupo grande: ${g.length} cards entre ${dataHora(g[0].createdAt)} e ${dataHora(g.at(-1).createdAt)} (use --de/--ate ou um --intervalo maior se for do mesmo cadastro)`)
+  const cardsDe = noPico.map(criado).sort((a, b) => a - b)
+  console.log(`${casa.nome}: ${contatosDoPico.size} contatos criados de uma vez entre ${dataHora(new Date(ini))} e ${dataHora(new Date(fim))}`)
+  if (cardsDe.length) console.log(`Os cards deles foram criados entre ${dataHora(new Date(cardsDe[0]))} e ${dataHora(new Date(cardsDe.at(-1)!))}`)
+  for (const g of outros) console.log(`Outro grupo grande: ${g.length} contatos entre ${dataHora(new Date(g[0]))} e ${dataHora(new Date(g.at(-1)!))} (use --de/--ate ou um --intervalo maior se for do mesmo cadastro)`)
   console.log(`\nApagar (continuam em NOVO LEAD): ${apagar.length}`)
   console.log(`  ${[...porDono].sort((a, b) => b[1] - a[1]).map(([n, q]) => `${n}: ${q}`).join(' · ')}`)
   console.log(`Manter (alguém já mexeu no card): ${manter.length}`)
