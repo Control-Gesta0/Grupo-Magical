@@ -36,6 +36,15 @@ export async function GET(req: Request) {
     where t.location_id = ${lid} or t.destino_casa = ${lid} order by t.id desc limit 8`
   const equipes = await sql`
     select c.nome as casa, e.ativo from equipe e join casas c on c.location_id = e.location_id where e.usuario_id in ${sql(ids)}`
+  // de qual casa o painel acha que são as etapas/funis dos cards desta casa (detecta funil copiado com os mesmos ids)
+  const etapasDosCards = await sql`
+    select o.pipeline_id, count(*)::int as cards, e.location_id as etapa_de, c.nome as casa_da_etapa, bool_or(e.principal) as principal
+    from oportunidades o left join etapas e on e.id = o.etapa_id left join casas c on c.location_id = e.location_id
+    where o.location_id = ${lid} group by 1, 3, 4`
+  const mesmoFunilEmOutraCasa = await sql`
+    select o.location_id, c.nome, count(*)::int as cards from oportunidades o join casas c on c.location_id = o.location_id
+    where o.location_id <> ${lid} and o.pipeline_id in (select distinct pipeline_id from oportunidades where location_id = ${lid})
+    group by 1, 2`
   const [cardsPorEtapa, entradas, agendamentosNoCardDeOutro, semHistorico, sync, funis] = await Promise.all([
     // cards da pessoa hoje, por funil e etapa
     sql`select e.pipeline_nome, e.principal, e.nome as etapa, e.chave, o.status, count(*)::int as n
@@ -62,5 +71,5 @@ export async function GET(req: Request) {
     sql`select inicio, fim, ok, detalhe from sincronizacoes where location_id = ${lid} order by id desc limit 2`,
     sql`select distinct pipeline_id, pipeline_nome, principal from etapas where location_id = ${lid}`,
   ])
-  return Response.json({ transferencias, equipes, usuarios, mudaram, funis, cardsPorEtapa, entradas, agendamentosNoCardDeOutro, semHistorico, sync })
+  return Response.json({ etapasDosCards, mesmoFunilEmOutraCasa, transferencias, equipes, usuarios, mudaram, funis, cardsPorEtapa, entradas, agendamentosNoCardDeOutro, semHistorico, sync })
 }
