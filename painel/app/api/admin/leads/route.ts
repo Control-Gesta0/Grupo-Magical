@@ -12,11 +12,19 @@ export async function GET(req: Request) {
   const q = new URL(req.url).searchParams
   const casa = casas().find(c => c.locationId === q.get('casa'))
   if (!casa) return Response.json({ erro: 'casa não encontrada' }, { status: 404 })
-  const desde = Date.now() - Number(q.get('horas') ?? 6) * 3600_000
+  try {
+    return await listar(casa, Number(q.get('horas') ?? 6))
+  } catch (e: any) {
+    return Response.json({ erro: String(e?.message ?? e).slice(0, 300) }, { status: 500 })
+  }
+}
+
+async function listar(casa: ReturnType<typeof casas>[number], horas: number) {
+  const desde = Date.now() - horas * 3600_000
   const { users = [] } = await ghl<{ users: any[] }>(`/users/?locationId=${casa.locationId}`, casa.token)
   const nome = (id: string | null) => (id ? users.find(u => u.id === id)?.name ?? id : null)
   const { contacts = [] } = await ghl<{ contacts: any[] }>(
-    `/contacts/?locationId=${casa.locationId}&limit=100&sortBy=date_added&sortOrder=desc`, casa.token)
+    `/contacts/?locationId=${casa.locationId}&limit=100`, casa.token)
   const novos = contacts.filter(c => Date.parse(c.dateAdded) >= desde)
   const linhas = []
   for (const c of novos) {
