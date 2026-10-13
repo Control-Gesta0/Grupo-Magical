@@ -74,7 +74,13 @@ export async function sincronizarCasa(casa: Casa, ate: number): Promise<Resultad
     })))
     await sql.begin(async tx => {
       await tx`delete from etapas where location_id = ${lid}`
-      if (etapas.length) await tx`insert into etapas ${tx(etapas)}`
+      // a mesma etapa pode vir repetida (funil duplicado) ou já existir em outra conta (funil copiado por snapshot):
+      // grava uma vez só e, se o id já existir, fica com a desta conta
+      const unicas = [...new Map(etapas.map(e => [e.id, e])).values()]
+      if (unicas.length) await tx`insert into etapas ${tx(unicas)}
+        on conflict (id) do update set location_id = excluded.location_id, pipeline_id = excluded.pipeline_id,
+          pipeline_nome = excluded.pipeline_nome, principal = excluded.principal, nome = excluded.nome,
+          chave = excluded.chave, posicao = excluded.posicao`
     })
 
     const linhas = opps.map(o => ({
