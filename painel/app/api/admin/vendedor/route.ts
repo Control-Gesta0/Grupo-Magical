@@ -27,6 +27,15 @@ export async function GET(req: Request) {
     from oportunidades o left join etapas e on e.id = o.etapa_id left join usuarios u on u.id = o.dono_id
     where o.location_id = ${lid} and o.ultima_mudanca_etapa > ${desde}
     order by o.ultima_mudanca_etapa desc limit 40`
+  // transferências recentes da casa (status e progresso) e em qual equipe a pessoa está
+  const transferencias = await sql`
+    select t.id, t.status, t.total, t.feitos, t.erro, t.criado_em, t.atualizado_em, t.incluir_descartados,
+      ud.nome as de, coalesce(up.nome, t.para) as para, cd.nome as destino
+    from transferencias t left join usuarios ud on ud.id = t.de left join usuarios up on up.id = t.para
+      left join casas cd on cd.location_id = t.destino_casa
+    where t.location_id = ${lid} or t.destino_casa = ${lid} order by t.id desc limit 8`
+  const equipes = await sql`
+    select c.nome as casa, e.ativo from equipe e join casas c on c.location_id = e.location_id where e.usuario_id in ${sql(ids)}`
   const [cardsPorEtapa, entradas, agendamentosNoCardDeOutro, semHistorico, sync, funis] = await Promise.all([
     // cards da pessoa hoje, por funil e etapa
     sql`select e.pipeline_nome, e.principal, e.nome as etapa, e.chave, o.status, count(*)::int as n
@@ -53,5 +62,5 @@ export async function GET(req: Request) {
     sql`select inicio, fim, ok, detalhe from sincronizacoes where location_id = ${lid} order by id desc limit 2`,
     sql`select distinct pipeline_id, pipeline_nome, principal from etapas where location_id = ${lid}`,
   ])
-  return Response.json({ usuarios, mudaram, funis, cardsPorEtapa, entradas, agendamentosNoCardDeOutro, semHistorico, sync })
+  return Response.json({ transferencias, equipes, usuarios, mudaram, funis, cardsPorEtapa, entradas, agendamentosNoCardDeOutro, semHistorico, sync })
 }
