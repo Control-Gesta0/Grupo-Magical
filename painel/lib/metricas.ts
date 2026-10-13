@@ -26,8 +26,8 @@ const BASE = ({ ini, fim }: Periodo) => db()`
     select (${ini}::timestamp at time zone 'America/Sao_Paulo') as ini,
            (${fim}::timestamp at time zone 'America/Sao_Paulo') as fim
   ),
-  funil as (select distinct pipeline_id from etapas where principal),
-  opp as (select o.* from oportunidades o join funil f on f.pipeline_id = o.pipeline_id),
+  funil as (select distinct location_id, pipeline_id from etapas where principal),
+  opp as (select o.* from oportunidades o join funil f on f.pipeline_id = o.pipeline_id and f.location_id = o.location_id),
   -- primeira entrada de cada card em cada etapa no período, com quem era dono naquele momento
   entradas as (
     select distinct on (m.oportunidade_id, m.chave_para)
@@ -100,10 +100,10 @@ export async function resumoCasas(periodo: Periodo, base: string): Promise<Linha
       (select count(*) from fech_class f where f.location_id = c.location_id)::int as fechamentos,
       (select count(*) from fech_class f where f.location_id = c.location_id and not f.passou)::int as pulou,
       (select count(*) from orc_class o where o.location_id = c.location_id and not o.passou)::int as orc_sem,
-      (select count(*) from opp left join etapas e on e.id = opp.etapa_id
+      (select count(*) from opp left join etapas e on e.id = opp.etapa_id and e.location_id = opp.location_id
          where opp.location_id = c.location_id and opp.status = 'open' and opp.dono_id is null
            and e.chave is distinct from 'descartado')::int as sem_dono,
-      (select count(*) from opp left join etapas e on e.id = opp.etapa_id
+      (select count(*) from opp left join etapas e on e.id = opp.etapa_id and e.location_id = opp.location_id
          where opp.location_id = c.location_id and opp.status = 'open' and opp.dono_id is not null
            and e.chave is distinct from 'descartado'
            and not exists (select 1 from usuario_casa uc where uc.location_id = c.location_id and uc.usuario_id = opp.dono_id))::int as dono_fora,
@@ -160,7 +160,7 @@ export async function porVendedor(periodo: Periodo, filtro: { lid: string } | { 
         (select count(*) from fech_class f where f.location_id = d.location_id and f.dono_id = d.dono_id)::int as fechamentos,
         (select count(*) from fech_class f where f.location_id = d.location_id and f.dono_id = d.dono_id and not f.passou)::int as pulou,
         (select count(*) from orc_class o where o.location_id = d.location_id and o.dono_id = d.dono_id and not o.passou)::int as orc_sem,
-        (select count(*) from opp left join etapas e on e.id = opp.etapa_id where opp.location_id = d.location_id and opp.dono_id = d.dono_id
+        (select count(*) from opp left join etapas e on e.id = opp.etapa_id and e.location_id = opp.location_id where opp.location_id = d.location_id and opp.dono_id = d.dono_id
            and opp.status = 'open' and e.chave is distinct from 'descartado')::int as abertas,
         exists (select 1 from usuario_casa uc where uc.location_id = d.location_id and uc.usuario_id = d.dono_id) as na_casa,
         exists (select 1 from equipe eq where eq.location_id = d.location_id and eq.usuario_id = d.dono_id) as na_equipe,

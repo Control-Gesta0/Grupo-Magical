@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   const mudaram = await sql`
     select o.id, o.nome, o.ultima_mudanca_etapa, o.historico_lido_em, e.nome as etapa, u.nome as dono,
       (select count(*) from movimentos m where m.oportunidade_id = o.id and m.em > ${desde})::int as movimentos
-    from oportunidades o left join etapas e on e.id = o.etapa_id left join usuarios u on u.id = o.dono_id
+    from oportunidades o left join etapas e on e.id = o.etapa_id and e.location_id = o.location_id left join usuarios u on u.id = o.dono_id
     where o.location_id = ${lid} and o.ultima_mudanca_etapa > ${desde}
     order by o.ultima_mudanca_etapa desc limit 40`
   // transferências recentes da casa (status e progresso) e em qual equipe a pessoa está
@@ -39,7 +39,7 @@ export async function GET(req: Request) {
   // de qual casa o painel acha que são as etapas/funis dos cards desta casa (detecta funil copiado com os mesmos ids)
   const etapasDosCards = await sql`
     select o.pipeline_id, count(*)::int as cards, e.location_id as etapa_de, c.nome as casa_da_etapa, bool_or(e.principal) as principal
-    from oportunidades o left join etapas e on e.id = o.etapa_id left join casas c on c.location_id = e.location_id
+    from oportunidades o left join etapas e on e.id = o.etapa_id and e.location_id = o.location_id left join casas c on c.location_id = e.location_id
     where o.location_id = ${lid} group by 1, 3, 4`
   const mesmoFunilEmOutraCasa = await sql`
     select o.location_id, c.nome, count(*)::int as cards from oportunidades o join casas c on c.location_id = o.location_id
@@ -48,13 +48,13 @@ export async function GET(req: Request) {
   const [cardsPorEtapa, entradas, agendamentosNoCardDeOutro, semHistorico, sync, funis] = await Promise.all([
     // cards da pessoa hoje, por funil e etapa
     sql`select e.pipeline_nome, e.principal, e.nome as etapa, e.chave, o.status, count(*)::int as n
-        from oportunidades o left join etapas e on e.id = o.etapa_id
+        from oportunidades o left join etapas e on e.id = o.etapa_id and e.location_id = o.location_id
         where o.location_id = ${lid} and o.dono_id in ${sql(ids)}
         group by 1, 2, 3, 4, 5 order by 1, 3`,
     // entradas em agendamento/orçamento/fechamento no período, pelo histórico, com o dono gravado na hora
     sql`select m.em, m.etapa_de, m.etapa_para, m.chave_para, m.dono_na_hora = any(${ids}) as dela_na_hora,
           o.dono_id = any(${ids}) as dela_hoje, e.principal, o.nome
-        from movimentos m join oportunidades o on o.id = m.oportunidade_id left join etapas e on e.id = o.etapa_id
+        from movimentos m join oportunidades o on o.id = m.oportunidade_id left join etapas e on e.id = o.etapa_id and e.location_id = o.location_id
         where m.location_id = ${lid} and m.em > ${desde} and m.chave_para in ('agendamento', 'orcamento', 'fechamento')
           and (m.dono_na_hora = any(${ids}) or o.dono_id = any(${ids}))
         order by m.em desc limit 60`,

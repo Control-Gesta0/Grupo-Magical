@@ -29,7 +29,7 @@ create table if not exists usuario_casa (
   primary key (usuario_id, location_id)
 );
 create table if not exists etapas (
-  id text primary key,
+  id text not null,
   location_id text not null,
   pipeline_id text not null,
   pipeline_nome text not null,
@@ -38,6 +38,15 @@ create table if not exists etapas (
   chave text,
   posicao int
 );
+-- funil copiado de uma conta para outra mantém os mesmos ids de etapa: a chave é (casa, etapa)
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'etapas_pkey') then
+    alter table etapas add primary key (location_id, id);
+  elsif (select count(*) from information_schema.key_column_usage where constraint_name = 'etapas_pkey' and table_name = 'etapas') = 1 then
+    alter table etapas drop constraint etapas_pkey;
+    alter table etapas add primary key (location_id, id);
+  end if;
+end $$;
 create table if not exists oportunidades (
   id text primary key,
   location_id text not null,
