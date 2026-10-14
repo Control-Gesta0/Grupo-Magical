@@ -16,7 +16,7 @@ export interface Transferencia {
   etapa: string | null
   destinos: string[] | null
   status: 'simulada' | 'rodando' | 'parcial' | 'concluida' | 'erro' | 'cancelada'
-  plano: { total: number; porEtapa: Record<string, Record<string, number>> } | null
+  plano: { total: number; porEtapa: Record<string, Record<string, number>>; mapa?: Record<string, string> } | null
   total: number | null
   feitos: number
   erro: string | null
@@ -67,7 +67,7 @@ export async function executarTransferencia(id: number) {
   after(async () => {
     try {
       const r = await transferirCards(casaPorLid(t.location_id), {
-        de: t.de, para: t.para, incluirDescartados: t.incluir_descartados, etapa: t.etapa, destinos: t.destinos, simular: false,
+        de: t.de, para: t.para, incluirDescartados: t.incluir_descartados, etapa: t.etapa, destinos: t.destinos, mapa: t.plano?.mapa ?? null, simular: false,
         ate: Date.now() + 240_000,
         aoProgredir: async feitos => { await sql`update transferencias set feitos = ${t.feitos + feitos}, atualizado_em = now() where id = ${id}` },
       })

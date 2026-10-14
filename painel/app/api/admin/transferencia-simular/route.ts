@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       destinos: (q.get('destinos') ?? '').split(',').filter(Boolean), usuario: 'Control Gestão',
     })
     const [t] = await db()`select plano, total from transferencias where id = ${id}`
-    return Response.json({ ok: true, id, total: t?.total, plano: t?.plano })
+    return Response.json({ ok: true, id, total: t?.total, plano: { ...t?.plano, mapa: undefined } })
   } catch (e: any) {
     return Response.json({ erro: String(e?.message ?? e).slice(0, 300) }, { status: 500 })
   }

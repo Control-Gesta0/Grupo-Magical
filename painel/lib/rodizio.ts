@@ -147,6 +147,7 @@ export async function atribuirContato(casa: Casa, contatoId: string, origem = 'w
 export interface PlanoTransferencia {
   total: number
   porEtapa: Record<string, Record<string, number>>
+  mapa?: Record<string, string>
 }
 
 /**
@@ -162,6 +163,8 @@ export async function transferirCards(casa: Casa, opcoes: {
   etapa?: string | null
   /** com para = 'lista': divide entre estas pessoas (pode incluir quem cede os cards) */
   destinos?: string[] | null
+  /** destino de cada card decidido na simulação (card -> pessoa); a execução segue o que foi simulado */
+  mapa?: Record<string, string> | null
   simular: boolean
   ate?: number
   aoProgredir?: (feitos: number, total: number) => Promise<void>
@@ -207,9 +210,9 @@ export async function transferirCards(casa: Casa, opcoes: {
   for (const [nomeEtapa, lista] of grupos) {
     lista.sort((a, b) => (b.lastStageChangeAt ?? '').localeCompare(a.lastStageChangeAt ?? ''))
     for (const o of lista) {
-      // dividindo com quem cede, a parte dela continua no nome dela; ao "Continuar" o painel relê esses cards,
-      // então o destino precisa ser sempre o mesmo para cada card (derivado do id), não da ordem da fila
-      const novo = opcoes.para === 'lista' ? destinos[hashId(o.id) % destinos.length] : destinos[i++ % destinos.length]
+      // dividindo com quem cede, a parte dela continua no nome dela e o "Continuar" relê esses cards:
+      // a execução usa o destino gravado na simulação, para cada card cair sempre com a mesma pessoa
+      const novo = opcoes.mapa?.[o.id] ?? destinos[i++ % destinos.length]
       plano.push({ o, etapa: nomeEtapa, novo })
     }
   }
@@ -218,7 +221,10 @@ export async function transferirCards(casa: Casa, opcoes: {
     porEtapa[p.etapa] ??= {}
     porEtapa[p.etapa][p.novo] = (porEtapa[p.etapa][p.novo] ?? 0) + 1
   }
-  if (opcoes.simular) return { total: plano.length, porEtapa, feitos: 0, completo: true }
+  if (opcoes.simular) {
+    const mapa = opcoes.para === 'lista' ? Object.fromEntries(plano.map(p => [p.o.id, p.novo])) : undefined
+    return { total: plano.length, porEtapa, mapa, feitos: 0, completo: true }
+  }
 
   let feitos = 0
   const fila = [...plano]
@@ -239,10 +245,4 @@ export async function transferirCards(casa: Casa, opcoes: {
   await Promise.all([trabalhador(), trabalhador(), trabalhador(), trabalhador()])
   await opcoes.aoProgredir?.(feitos, plano.length)
   return { total: plano.length, porEtapa, feitos, completo: feitos === plano.length }
-}
-
-function hashId(id: string) {
-  let h = 0
-  for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0
-  return h
 }
