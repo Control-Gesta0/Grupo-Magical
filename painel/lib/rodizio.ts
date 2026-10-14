@@ -156,8 +156,12 @@ export interface PlanoTransferencia {
  */
 export async function transferirCards(casa: Casa, opcoes: {
   de: string
-  para: string | 'rodizio'
+  para: string | 'rodizio' | 'lista'
   incluirDescartados: boolean
+  /** só cards desta etapa (chave, ex.: 'follow_up'); vazio = todas */
+  etapa?: string | null
+  /** com para = 'lista': divide entre estas pessoas (pode incluir quem cede os cards) */
+  destinos?: string[] | null
   simular: boolean
   ate?: number
   aoProgredir?: (feitos: number, total: number) => Promise<void>
@@ -178,7 +182,8 @@ export async function transferirCards(casa: Casa, opcoes: {
       : null
   }
   const alvo = cards.filter(o => o.assignedTo === opcoes.de
-    && (opcoes.incluirDescartados || chaveEtapa(etapa.get(o.pipelineStageId)) !== 'descartado'))
+    && (opcoes.incluirDescartados || chaveEtapa(etapa.get(o.pipelineStageId)) !== 'descartado')
+    && (!opcoes.etapa || chaveEtapa(etapa.get(o.pipelineStageId)) === opcoes.etapa))
 
   let destinos: string[]
   if (opcoes.para === 'rodizio') {
@@ -186,6 +191,9 @@ export async function transferirCards(casa: Casa, opcoes: {
       select usuario_id from equipe where location_id = ${lid} and ativo and usuario_id <> ${opcoes.de} order by usuario_id`)
       .map(r => r.usuario_id)
     if (!destinos.length) throw new Error('não há ninguém ativo na equipe para receber os cards')
+  } else if (opcoes.para === 'lista') {
+    destinos = [...new Set(opcoes.destinos ?? [])]
+    if (!destinos.length) throw new Error('marque quem vai receber os cards')
   } else destinos = [opcoes.para]
 
   // rodízio dentro de cada etapa, do mais recente ao mais antigo, para cada um receber um mix igual
@@ -198,7 +206,12 @@ export async function transferirCards(casa: Casa, opcoes: {
   let i = 0
   for (const [nomeEtapa, lista] of grupos) {
     lista.sort((a, b) => (b.lastStageChangeAt ?? '').localeCompare(a.lastStageChangeAt ?? ''))
-    for (const o of lista) plano.push({ o, etapa: nomeEtapa, novo: destinos[i++ % destinos.length] })
+    for (const o of lista) {
+      // dividindo com quem cede, a parte dela continua no nome dela; ao "Continuar" o painel relê esses cards,
+      // então o destino precisa ser sempre o mesmo para cada card (derivado do id), não da ordem da fila
+      const novo = opcoes.para === 'lista' ? destinos[hashId(o.id) % destinos.length] : destinos[i++ % destinos.length]
+      plano.push({ o, etapa: nomeEtapa, novo })
+    }
   }
   const porEtapa: PlanoTransferencia['porEtapa'] = {}
   for (const p of plano) {
@@ -212,6 +225,7 @@ export async function transferirCards(casa: Casa, opcoes: {
   const trabalhador = async () => {
     while (fila.length && Date.now() < (opcoes.ate ?? Infinity)) {
       const p = fila.shift()!
+      if (p.novo === opcoes.de) { feitos++; continue } // na divisão, a parte de quem cede fica com ela
       await ghlGravar('PUT', `/opportunities/${p.o.id}`, token, { assignedTo: p.novo })
       if (p.o.contactId) {
         const { contact } = await ghl<{ contact: any }>(`/contacts/${p.o.contactId}`, token)
@@ -225,4 +239,10 @@ export async function transferirCards(casa: Casa, opcoes: {
   await Promise.all([trabalhador(), trabalhador(), trabalhador(), trabalhador()])
   await opcoes.aoProgredir?.(feitos, plano.length)
   return { total: plano.length, porEtapa, feitos, completo: feitos === plano.length }
+}
+
+function hashId(id: string) {
+  let h = 0
+  for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0
+  return h
 }

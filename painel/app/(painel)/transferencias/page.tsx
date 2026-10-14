@@ -7,6 +7,11 @@ import { dataHora } from '@/lib/util'
 
 export const maxDuration = 300
 
+const ETAPAS: Record<string, string> = {
+  novo_lead: 'Novo lead', ligacao: 'Ligação', qualificacao: 'Qualificação', follow_up: 'Follow up',
+  agendamento: 'Agendamento', orcamento: 'Orçamento/visita', fechamento: 'Fechamento', descartado: 'Lead descartado',
+}
+
 const STATUS: Record<string, string> = {
   simulada: 'aguardando confirmação', rodando: 'transferindo…', parcial: 'parou no meio, falta continuar',
   concluida: 'concluída', erro: 'erro',
@@ -49,6 +54,7 @@ export default async function Transferencias({ searchParams }: { searchParams: P
     await simularTransferencia({
       lid: lid!, de: String(f.get('de')), para: String(f.get('para')),
       destinoCasa: String(f.get('destino') || '') || null, incluirDescartados: f.get('descartados') === '1',
+      etapa: String(f.get('etapa') || '') || null, destinos: f.getAll('destinos').map(String),
       usuario: u?.nome ?? '?',
     })
     redirect(volta)
@@ -83,7 +89,20 @@ export default async function Transferencias({ searchParams }: { searchParams: P
         <label>Vão para <select name="para" required defaultValue="">
           <option value="" disabled>Escolha para quem</option>
           <option value="rodizio">O rodízio da equipe desta casa (divide igualmente)</option>
+          <option value="lista">Dividir entre as pessoas marcadas abaixo</option>
           {comAcesso.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+        </select></label>
+        <details>
+          <summary className="suave">Dividir entre (marque quem recebe; pode incluir a própria pessoa)</summary>
+          <div style={{ columns: 2, marginTop: 6 }}>
+            {comAcesso.map(u => (
+              <label key={u.id} style={{ display: 'block' }}><input type="checkbox" name="destinos" value={u.id} /> {u.nome}</label>
+            ))}
+          </div>
+        </details>
+        <label>Só os cards da etapa <select name="etapa" defaultValue="">
+          <option value="">Todas as etapas</option>
+          {Object.entries(ETAPAS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select></label>
         <label>A pessoa passa a atender em <select name="destino">
           <option value="">Continua nesta casa (só move os cards)</option>
@@ -101,7 +120,9 @@ export default async function Transferencias({ searchParams }: { searchParams: P
       {transferencias.map(t => (
         <div key={t.id} className="cartao" style={{ marginBottom: 12 }}>
           <div>
-            <strong>{t.de_nome ?? t.de}</strong> → {t.para === 'rodizio' ? 'rodízio da equipe' : (t.para_nome ?? t.para)}
+            <strong>{t.de_nome ?? t.de}</strong>{t.etapa && <> · só {ETAPAS[t.etapa] ?? t.etapa}</>} → {t.para === 'rodizio' ? 'rodízio da equipe'
+              : t.para === 'lista' ? `dividido entre ${(t.destinos ?? []).map(d => comAcesso.find(x => x.id === d)?.nome?.split(' ')[0] ?? d).join(', ')}`
+              : (t.para_nome ?? t.para)}
             {t.destino_nome && <> · passa para <strong>{t.destino_nome}</strong></>}
             <span className="suave"> · {dataHora(t.criado_em)} por {t.criado_por}</span>
           </div>

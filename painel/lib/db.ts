@@ -134,6 +134,9 @@ create table if not exists transferencias (
   criado_em timestamptz not null default now(),
   atualizado_em timestamptz not null default now()
 );
+-- transferência só de uma etapa e dividida entre pessoas escolhidas
+alter table transferencias add column if not exists etapa text;
+alter table transferencias add column if not exists destinos text[];
 create table if not exists sincronizacoes (
   id bigserial primary key,
   location_id text not null,

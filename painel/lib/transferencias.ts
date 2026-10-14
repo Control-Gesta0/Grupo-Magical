@@ -13,6 +13,8 @@ export interface Transferencia {
   destino_casa: string | null
   destino_nome: string | null
   incluir_descartados: boolean
+  etapa: string | null
+  destinos: string[] | null
   status: 'simulada' | 'rodando' | 'parcial' | 'concluida' | 'erro' | 'cancelada'
   plano: { total: number; porEtapa: Record<string, Record<string, number>> } | null
   total: number | null
@@ -31,16 +33,21 @@ const casaPorLid = (lid: string) => {
 /** Passo 1: calcula quem recebe o quê, sem gravar no GHL. */
 export async function simularTransferencia(p: {
   lid: string; de: string; para: string; destinoCasa: string | null; incluirDescartados: boolean; usuario: string
+  etapa?: string | null; destinos?: string[] | null
 }) {
   await migrar()
   if (!p.de || !p.para || p.de === p.para) throw new Error('escolha de quem saem os cards e para quem vão')
   // clicar duas vezes em Simular não cria duas simulações iguais
   await db()`update transferencias set status = 'cancelada'
     where location_id = ${p.lid} and de = ${p.de} and para = ${p.para} and status = 'simulada'`
-  const plano = await transferirCards(casaPorLid(p.lid), { de: p.de, para: p.para, incluirDescartados: p.incluirDescartados, simular: true })
+  const etapa = p.etapa || null
+  const destinos = p.para === 'lista' ? p.destinos ?? [] : null
+  const plano = await transferirCards(casaPorLid(p.lid), {
+    de: p.de, para: p.para, incluirDescartados: p.incluirDescartados, etapa, destinos, simular: true,
+  })
   const [t] = await db()<{ id: number }[]>`
-    insert into transferencias (location_id, de, para, destino_casa, incluir_descartados, status, plano, total, criado_por)
-    values (${p.lid}, ${p.de}, ${p.para}, ${p.destinoCasa}, ${p.incluirDescartados}, 'simulada',
+    insert into transferencias (location_id, de, para, destino_casa, incluir_descartados, etapa, destinos, status, plano, total, criado_por)
+    values (${p.lid}, ${p.de}, ${p.para}, ${p.destinoCasa}, ${p.incluirDescartados}, ${etapa}, ${destinos}, 'simulada',
             ${db().json(plano as any)}, ${plano.total}, ${p.usuario})
     returning id`
   return t.id
@@ -60,7 +67,7 @@ export async function executarTransferencia(id: number) {
   after(async () => {
     try {
       const r = await transferirCards(casaPorLid(t.location_id), {
-        de: t.de, para: t.para, incluirDescartados: t.incluir_descartados, simular: false,
+        de: t.de, para: t.para, incluirDescartados: t.incluir_descartados, etapa: t.etapa, destinos: t.destinos, simular: false,
         ate: Date.now() + 240_000,
         aoProgredir: async feitos => { await sql`update transferencias set feitos = ${t.feitos + feitos}, atualizado_em = now() where id = ${id}` },
       })
