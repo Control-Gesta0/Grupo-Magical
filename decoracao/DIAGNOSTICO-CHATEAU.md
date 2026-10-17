@@ -1,7 +1,8 @@
 # Diagnóstico · Chateau Decoração (17/10/2026)
 
 Primeira leitura do fluxo de automações da decoração, para levar a jornada inteira para a IA.
-Fonte: prints da lista de workflows ("Fluxo Automático") e da tela de Integrações Privadas.
+Fonte: prints da lista de workflows ("Fluxo Automático") e da tela de Integrações Privadas da subconta
+Chateau do Lago · Decoração (`ovLCG3IhY5QY9aHDHISU`).
 Ainda não foi aberto o conteúdo de cada workflow (gatilho, esperas, mensagens). Isso é o próximo passo.
 
 ## 1. O que existe hoje
@@ -36,10 +37,14 @@ Ainda não foi aberto o conteúdo de cada workflow (gatilho, esperas, mensagens)
 
 ## 3. Integração "Painel Control Gestao" com alerta vermelho
 
-O print é da subconta **Chateau do Lago (vendas)**, não da Decoração. Essa integração é o token que o painel
-usa para sincronizar a casa. O triângulo vermelho no CRM costuma indicar token que precisa ser rotacionado
-ou com escopo pendente. Passar o mouse no ícone mostra o motivo. Se o token parou, a sincronização horária
-do Chateau do Lago no painel e o rodízio (que grava no CRM) param junto. Conferir antes de qualquer outra coisa.
+A integração fica na própria subconta **Chateau do Lago · Decoração** (`ovLCG3IhY5QY9aHDHISU`), criada em
+02/10/2026, junto com as demais do painel. Ou seja, já existe um token para esta base, que é o acesso de que o
+diagnóstico completo precisa (se tiver os escopos de leitura de contatos, oportunidades, conversas,
+calendários, formulários e workflows).
+
+O triângulo vermelho no CRM costuma indicar token que precisa ser rotacionado ou escopo pendente; passar o
+mouse no ícone mostra o motivo. Se esta base estiver no `GHL_CASAS_JSON` do painel, a sincronização dela para
+junto. Resolver o alerta antes de usar o token no raio-x.
 
 ## 4. Desenho proposto: jornada da decoração com IA
 
@@ -75,8 +80,9 @@ Tag `atendimento-humano` cala a IA no contato na hora.
 
 ## 6. Acesso necessário para o diagnóstico completo
 
-- Token de integração privada **da subconta Decoração**, só leitura no início:
-  contatos, oportunidades, conversas, calendários, formulários, workflows (lista), campos personalizados.
+- O token da integração "Painel Control Gestao" desta subconta (já existe, ver item 3), com o alerta resolvido
+  e escopos de leitura: contatos, oportunidades, conversas, calendários, formulários, workflows (lista),
+  campos personalizados.
 - Prints do interior de cada workflow (gatilho + passos), já que a API do CRM lista os workflows mas não
   devolve os passos. Alternativa: navegador autenticado.
 - Com isso, o `raio-x/raiox.py` roda na base de decoração e mede o tempo médio entre cada fase e onde
