@@ -122,3 +122,67 @@ Sai do raio-x assim que houver token de leitura. Sem essa foto não há como pro
 3. Fechar o desenho: fases, campos do briefing, o que a IA faz sozinha, modelos de WhatsApp.
 4. Construir no repositório próprio da decoração, com etiqueta de liberação: primeiro um contato da
    Control Gestão, depois 10 casais, depois todos.
+
+## 8. Premissas da conta: os 15 templates (17/10/2026)
+
+Fonte: PDF "Nomes corretos para os templetes", texto integral em `TEMPLATES-PREMISSAS.md`.
+
+### 8.1 O que o documento responde
+- **A decoração já vem contratada:** todo casal tem o **Pacote Ouro**. O "Boas-vindas" vai para quem fechou o
+  evento. Fora do pacote, existe um **orçamento** de itens extras (txN8), conduzido pelo decorador.
+- **Prazo:** a equipe só procura o casal **até 6 meses antes do evento**. Até lá o casal só manda referências.
+- **Ordem real:** alinhamento → orçamento → briefing → mood board → D-2 → D+1.
+- **O "+ IA" de hoje não é uma IA:** txN4 é uma lista de 38 frases prontas de elogio sorteadas, seguidas de uma
+  assinatura fixa.
+- **Números da casa** para assuntos que não são da decoração: comercial, planejamento e financeiro.
+
+### 8.2 Mapa template × workflow
+| Fase | Template | Tipo | Workflow | Inscritos |
+|---|---|---|---|---:|
+| Boas-vindas (Pacote Ouro) | txN1 | auto | 1. Boas-vindas | 309 |
+| Formulário de inspirações | txN2 | auto | 2. Inspirações e conversas + IA | 43 |
+| Canal de inspirações aberto | txN3 | manual | 2 | |
+| Reação a cada inspiração | txN4 + assinatura | auto | 2 | |
+| Formulário respondido | | | 3. Formulario Briefing Respondido | 3 |
+| Vamos agendar o alinhamento | txN5 | auto | 4. Reunião de alinhamento e Confirmação | 25 |
+| Alinhamento marcado | txN6 | auto | 4 | |
+| Ata do alinhamento | txN7 | manual | | |
+| Orçamento de extras | txN8 | manual | | |
+| Vamos agendar o briefing | txN9 | auto | 5. Reunião de Briefing | 20 |
+| Briefing marcado | txN10 | auto | 5 | |
+| Ata do briefing | txN11 | manual | | |
+| Mood board em criação | txN12 | manual | 6. Mood board | 3 |
+| Mood board aprovado | txN13 | manual | 6 | |
+| 2 dias antes do evento | txN14 | auto | 7. A espera do Grande Dia | 0 |
+| 1 dia depois do evento | txN15 | auto | 8? (cortado no print) | ? |
+
+### 8.3 Problemas encontrados nos próprios templates
+1. **Telefones trocados.** txN3 diz Comercial 21 99509-6486, Planejamento 21 99750-4012, Financeiro 21 96546-0661.
+   A assinatura do txN4 diz Comercial (21) 99750-4012 e Planejamento (21) 96546-0661. O casal que liga para o
+   "comercial" da assinatura cai no planejamento. Confirmar os números certos e corrigir.
+2. **Elogio sorteado sem ler a mensagem.** Se o casal escreve "dá pra trocar o arco por painel?" ou "quanto custa
+   a mesa extra?", recebe "😍 Amamos!" e a assinatura. A dúvida fica sem resposta e ninguém é avisado.
+3. **Assinatura longa depois de cada frase.** Casal que manda 10 fotos recebe 10 elogios e 10 assinaturas.
+4. **Formulário de inspirações (txN2) com 3 respostas em 43.** Mesmo padrão já visto: formulário não é respondido.
+5. **D-2 com 0 inscritos.** Depende da data do evento; o gatilho não está disparando.
+6. **Renumeração:** o PDF renomeia templates ("antigo txN3 vira txN2" etc.). Os workflows precisam apontar para
+   os nomes novos; conferir um por um quando houver os prints.
+
+### 8.4 Onde a IA entra, fase por fase
+| Fase | Hoje | Com IA | Quem decide |
+|---|---|---|---|
+| Inspirações (até 6 meses antes) | txN4 sorteado | A IA vê a foto ou o vídeo, comenta o que tem nela no tom da casa (os 38 elogios viram exemplo de tom, não lista de sorteio), guarda a descrição no histórico de inspirações do card e junta várias fotos numa resposta só. Assinatura no máximo uma vez por dia | IA |
+| Dúvida no canal | sem resposta | Dúvida sobre o Pacote Ouro: responde com o que está no pacote. Contrato, pagamento, convidados: passa o número certo do setor. Dúvida de decoração fora do pacote: avisa o decorador | IA encaminha, humano resolve |
+| Antes do alinhamento | decorador estuda a conversa | Resumo das inspirações para o decorador: estilo, paleta, elementos que se repetem, o que o casal rejeitou | IA prepara, decorador usa |
+| Agendar alinhamento e briefing (txN5, txN9) | "nossa equipe entrará em contato" | A IA oferece horários livres da agenda do decorador e marca; txN6/txN10 saem sozinhos com data e hora | IA, se o decorador liberar a agenda |
+| Atas (txN7, txN11) | decorador escreve | IA redige a ata a partir das anotações ou do áudio da reunião; decorador revisa e envia | Decorador aprova |
+| Orçamento (txN8) | decorador conduz | IA não fala de preço de extra. Lembra o casal se ele some e avisa o decorador | Decorador |
+| Mood board (txN12, txN13) | manual | Continua manual; a IA só registra "aprovado" ou o pedido de ajuste quando o casal responde | Decorador |
+| D-2 e D+1 (txN14, txN15) | D-2 não dispara | Disparo pela data do evento. No D+1 a IA lê a resposta: elogio vira pedido de avaliação; queixa vira alerta imediato para a gestão | IA + gestão |
+
+### 8.5 O que ainda falta
+- Conteúdo do **Pacote Ouro** (o que inclui e o que é extra), para a IA responder sem inventar.
+- Os **telefones corretos** de cada setor.
+- Onde fica a **data do evento** no CRM.
+- Se os templates são **modelos aprovados na Meta** (número oficial) ou mensagens de instância própria.
+- Prints dos workflows por dentro e o item 8 da lista.
