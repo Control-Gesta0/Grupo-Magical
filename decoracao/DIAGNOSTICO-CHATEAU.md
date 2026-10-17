@@ -184,5 +184,34 @@ Fonte: PDF "Nomes corretos para os templetes", texto integral em `TEMPLATES-PREM
 - Conteúdo do **Pacote Ouro** (o que inclui e o que é extra), para a IA responder sem inventar.
 - Os **telefones corretos** de cada setor.
 - Onde fica a **data do evento** no CRM.
-- Se os templates são **modelos aprovados na Meta** (número oficial) ou mensagens de instância própria.
+- ~~Se os templates são modelos aprovados na Meta~~: decidido em 17/10, canal Zaptos (seção 9).
 - Prints dos workflows por dentro e o item 8 da lista.
+
+## 9. Decisão de canal: WhatsApp pela Zaptos no canal SMS (17/10/2026)
+
+A API oficial sai. A conversa passa a ser o WhatsApp conectado pela **Zaptos**, que no CRM aparece como canal
+**SMS**. O que isso muda:
+
+| Assunto | Com a API oficial | Com a Zaptos |
+|---|---|---|
+| Janela de 24h | lembretes fora da janela só com modelo aprovado pela Meta | **não existe**: D-2, D+1 e lembretes saem como texto livre |
+| Os 15 "templates" | modelos a aprovar na Meta | viram textos dos workflows (e exemplos de tom para a IA). Os nomes txN1 a txN15 continuam valendo como referência |
+| Envio pelo agente | canal WhatsApp | mensagem do tipo **SMS** na API de conversas; a Zaptos entrega no WhatsApp |
+| Gatilho do agente | resposta no WhatsApp | workflow "Cliente respondeu" filtrado pelo canal **SMS** |
+
+Riscos novos, todos para testar antes de ligar:
+1. **Reconexão do celular gera cadastro em massa.** Já aconteceu nas casas de vendas (script `limpar-pico` na
+   branch `claude/confident-dijkstra-w1le9h`): ao reconectar, as conversas antigas do celular viram contatos novos
+   e entram nos workflows. Na decoração isso mandaria o txN1 (Boas-vindas) para gente que não é casal da casa.
+   O Boas-vindas não pode disparar por "contato criado"; tem que disparar por um sinal de casal contratado
+   (etiqueta ou entrada no funil vinda das vendas). Vale conferir se os 309 do Boas-vindas têm um pico assim.
+2. **Mídia.** Fotos e vídeos de inspiração são o centro da fase 1. Testar se a Zaptos entrega o anexo do casal no
+   CRM com link que o agente consegue baixar, e se o envio de imagem/áudio da casa chega no celular.
+3. **Número desconectado falha calado.** Se o celular da decoração desconectar, os envios param sem erro visível.
+   O guardião diário precisa conferir o último envio entregue e alertar no grupo.
+4. **Bloqueio por volume.** Número não oficial pode ser bloqueado pelo WhatsApp se disparar muito de uma vez.
+   Na decoração o volume é baixo (por data do evento), mas nada de disparo em massa para a base antiga.
+5. **Um número, um agente.** Esse WhatsApp não pode estar em outro sistema ou outra subconta, e a IA nativa do
+   CRM fica desligada nele.
+6. **Mensagens de grupo.** Se a Zaptos trouxer grupos do celular, o agente ignora tudo que não for conversa
+   individual.
