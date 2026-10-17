@@ -87,3 +87,38 @@ Tag `atendimento-humano` cala a IA no contato na hora.
   devolve os passos. Alternativa: navegador autenticado.
 - Com isso, o `raio-x/raiox.py` roda na base de decoração e mede o tempo médio entre cada fase e onde
   os contatos param.
+
+## 7. Reavaliação pela metodologia do agente de IA (17/10/2026)
+
+Nenhum dado novo desde a primeira leitura (sem token de leitura nesta sessão, sem prints dos workflows por
+dentro). A reavaliação muda o enquadramento e mostra quatro riscos que a primeira versão não tinha.
+
+### 7.1 Isto não é um agente de vendas
+O padrão da Control Gestão é um agente de vendas (SDR): leva o lead até "Agendado" e entrega ao vendedor.
+A decoração começa **depois** da venda: o casal já é cliente e a jornada dura meses, até o dia do evento.
+Consequências:
+- A IA continua conversando depois da reunião (mood board, lembretes, pós-evento). O limite do que ela faz
+  sozinha deixa de ser "até agendar" e passa a ser por assunto: ela coleta, resume, agenda e lembra;
+  preço, itens do contrato, aprovação criativa e reclamação vão para a decoradora.
+- O que mede sucesso não é venda. É: briefing completo antes da reunião, reunião realizada, mood board
+  aprovado, nenhum item pendente na semana do evento, avaliação e indicação depois.
+
+### 7.2 Riscos que precisam de resposta antes de construir
+| Risco | Por que importa | O que decide |
+|---|---|---|
+| **Janela de 24h do WhatsApp oficial** | A jornada tem semanas de silêncio entre fases. Fora das 24h após a última mensagem do casal, só sai mensagem com **modelo aprovado pela Meta**, e no GHL isso é feito por etiqueta, que dispara um workflow, que envia o modelo. Os lembretes D-90 a D-1 dependem disso | Se o número é oficial: criar e aprovar um modelo por lembrete. Se é instância própria (uazapi): texto livre, sem janela |
+| **"+ IA" no passo 2** | Se for o Conversation AI nativo do GHL, ele e o agente novo respondem o mesmo casal | Identificar e desligar no canal antes do primeiro teste |
+| **Mesmo número das vendas?** | Um número = um agente. Se o WhatsApp da decoração for o do Chateau do Lago vendas, a conversa do casal cai em dois lugares | Número próprio da decoração, ou separar por etiqueta sem sobreposição |
+| **Data do evento** | Toda a fase "À espera do Grande Dia" é calculada a partir dela; hoje esse fluxo tem 0 inscritos | Confirmar o campo e preencher para quem já fechou antes de ligar a cadência |
+
+### 7.3 Foto do antes (o que medir antes de ligar a IA)
+Últimos 90 dias na subconta de decoração: casais que entraram · com briefing completo · com reunião
+realizada · com mood board aprovado · tempo médio de cada passagem · casais sem resposta há mais de 7 dias.
+Sai do raio-x assim que houver token de leitura. Sem essa foto não há como provar depois o que a IA mudou.
+
+### 7.4 Ordem proposta
+1. Resolver o alerta do token e rodar o raio-x (foto do antes).
+2. Prints dos workflows por dentro e respostas da seção 5.
+3. Fechar o desenho: fases, campos do briefing, o que a IA faz sozinha, modelos de WhatsApp.
+4. Construir no repositório próprio da decoração, com etiqueta de liberação: primeiro um contato da
+   Control Gestão, depois 10 casais, depois todos.
