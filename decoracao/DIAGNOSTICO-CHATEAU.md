@@ -2,7 +2,7 @@
 
 Primeira leitura do fluxo de automações da decoração, para levar a jornada inteira para a IA.
 Fonte: prints da lista de workflows ("Fluxo Automático") e da tela de Integrações Privadas da subconta
-Chateau do Lago · Decoração (`ovLCG3IhY5QY9aHDHISU`).
+Chateau do Lago · Decoração (`ovLCG3lhY5QY9aHDHlSU`).
 Ainda não foi aberto o conteúdo de cada workflow (gatilho, esperas, mensagens). Isso é o próximo passo.
 
 ## 1. O que existe hoje
@@ -37,7 +37,7 @@ Ainda não foi aberto o conteúdo de cada workflow (gatilho, esperas, mensagens)
 
 ## 3. Integração "Painel Control Gestao" com alerta vermelho
 
-A integração fica na própria subconta **Chateau do Lago · Decoração** (`ovLCG3IhY5QY9aHDHISU`), criada em
+A integração fica na própria subconta **Chateau do Lago · Decoração** (`ovLCG3lhY5QY9aHDHlSU`), criada em
 02/10/2026, junto com as demais do painel. Ou seja, já existe um token para esta base, que é o acesso de que o
 diagnóstico completo precisa (se tiver os escopos de leitura de contatos, oportunidades, conversas,
 calendários, formulários e workflows).

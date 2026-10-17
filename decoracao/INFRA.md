@@ -23,7 +23,7 @@ Somente leitura: campos personalizados, usuários, workflows, formulários e res
 
 | Variável | O que é |
 |---|---|
-| `GHL_CASAS_JSON` | `[{"casa":"chateau-decoracao","nome":"Chateau do Lago · Decoração","base":"decoracao","locationId":"ovLCG3IhY5QY9aHDHISU","token":"pit-..."}]` |
+| `GHL_CASAS_JSON` | `[{"casa":"chateau-decoracao","nome":"Chateau do Lago · Decoração","base":"decoracao","locationId":"ovLCG3lhY5QY9aHDHlSU","token":"pit-..."}]` |
 | `ANTHROPIC_API_KEY` | conversa com o casal |
 | `OPENAI_API_KEY` | descrição de foto/vídeo e transcrição de áudio |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | criadas pela Vercel ao conectar o Upstash |
