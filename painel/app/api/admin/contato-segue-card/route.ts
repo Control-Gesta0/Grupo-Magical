@@ -17,7 +17,7 @@ async function rodar(req: Request, aplicar: boolean) {
     const resumo: Record<string, number> = {}
     for (const t of r.trocas) resumo[`${t.de} → ${t.para}`] = (resumo[`${t.de} → ${t.para}`] ?? 0) + 1
     return Response.json({ casa: casa.nome, aplicado: aplicar, contatos: r.contatos, alinhados: r.alinhados,
-      conflitos: r.conflitos, foraDaCasa: r.foraDaCasa, trocas: resumo })
+      conflitos: r.conflitos, foraDaCasa: r.foraDaCasa, protegidos: r.protegidos, trocas: resumo })
   } catch (e: any) {
     return Response.json({ erro: String(e?.message ?? e).slice(0, 300) }, { status: 500 })
   }

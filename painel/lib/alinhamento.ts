@@ -7,8 +7,10 @@ import type { Casa } from './casas'
  * do contato). Quando alguém troca só o dono do card no CRM, o contato fica para trás; aqui ele acompanha.
  * Só mexe quando todos os cards abertos do contato têm a mesma dona e ela ainda tem acesso à casa.
  * Cards de donas diferentes (conflito) ou com quem saiu da casa ficam para a gerência decidir.
+ * Também não tira o contato de quem tem acesso à casa e não está no rodízio (agentes de IA, gerentes):
+ * só move contato sem dono, de quem saiu da casa ou de outra pessoa do rodízio.
  */
-export interface Resumo { contatos: number; alinhados: number; conflitos: number; foraDaCasa: number }
+export interface Resumo { contatos: number; alinhados: number; conflitos: number; foraDaCasa: number; protegidos: number }
 
 /** Dono único dos cards abertos de cada contato (null = conflito). */
 function donosPorContato(cards: { contactId?: string; assignedTo?: string; status?: string }[]) {
@@ -36,7 +38,9 @@ export async function alinhar(casa: Casa, p: {
   await migrar()
   const donos = donosPorContato(p.cards)
   const alvo = p.contatos ? [...new Set(p.contatos)].filter(c => donos.has(c)) : [...donos.keys()]
-  const r = { contatos: alvo.length, alinhados: 0, conflitos: 0, foraDaCasa: 0, trocas: [] as { contato: string; de: string | null; para: string }[] }
+  const rodizio = new Set((await db()<{ usuario_id: string }[]>`
+    select distinct usuario_id from equipe where location_id = ${casa.locationId}`).map(x => x.usuario_id))
+  const r = { contatos: alvo.length, alinhados: 0, conflitos: 0, foraDaCasa: 0, protegidos: 0, trocas: [] as { contato: string; de: string | null; para: string }[] }
   for (const contato of alvo) {
     const ds = donos.get(contato)!
     if (ds.size > 1) { r.conflitos++; continue }
@@ -46,6 +50,8 @@ export async function alinhar(casa: Casa, p: {
       ? p.donoAtual.get(contato)!
       : (await ghl<{ contact: any }>(`/contacts/${contato}`, casa.token)).contact?.assignedTo ?? null
     if (atual === dono) continue
+    // contato com alguém da casa que não está no rodízio (IA, gerente): não mexe
+    if (atual && p.usuariosDaCasa.has(atual) && !rodizio.has(atual)) { r.protegidos++; continue }
     if (p.aplicar) {
       await ghlGravar('PUT', `/contacts/${contato}`, casa.token, { assignedTo: dono })
       await registrar(casa.locationId, contato, atual, dono, p.origem)
