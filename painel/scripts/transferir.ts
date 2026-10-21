@@ -89,7 +89,8 @@ async function main() {
     await ghl('PUT', `/opportunities/${p.o.id}`, token, { assignedTo: p.novo })
     if (p.o.contactId) {
       const { contact } = await ghl('GET', `/contacts/${p.o.contactId}`, token)
-      if (!contact.assignedTo || contact.assignedTo === de) {
+      // regra da Magical: o contato acompanha sempre o dono do card
+      if (contact.assignedTo !== p.novo) {
         await ghl('PUT', `/contacts/${p.o.contactId}`, token, { assignedTo: p.novo }); contatos++
       }
     }

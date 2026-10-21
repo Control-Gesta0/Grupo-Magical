@@ -124,8 +124,6 @@ export async function atribuirContato(casa: Casa, contatoId: string, origem = 'w
   if (simulada) return { ok: true, simulada: true, usuario_id: escolhido, manual: !!manual }
 
   await ghlGravar('PUT', `/contacts/${contatoId}`, casa.token, { assignedTo: escolhido })
-  const membros = new Set((await sql<{ usuario_id: string }[]>`
-    select usuario_id from equipe where location_id = ${lid} and ativo`).map(r => r.usuario_id))
   // o card criado no mesmo fluxo pode levar alguns segundos para aparecer na busca do GHL
   let opportunities: any[] = []
   for (let tentativa = 0; tentativa < 4; tentativa++) {
@@ -134,10 +132,8 @@ export async function atribuirContato(casa: Casa, contatoId: string, origem = 'w
       `/opportunities/search?location_id=${lid}&contact_id=${contatoId}&status=open`, casa.token)).opportunities ?? []
     if (opportunities.length) break
   }
-  // card sem dono, com dono fora da equipe, ou recém-criado neste mesmo fluxo (caso o "Assign to user" ainda esteja ligado)
-  const recente = (o: any) => Date.now() - Date.parse(o.createdAt ?? 0) < 15 * 60_000
-  const cards = opportunities.filter(o => o.assignedTo !== escolhido
-    && (!o.assignedTo || !membros.has(o.assignedTo) || recente(o)))
+  // regra da Magical: contato e cards abertos sempre com o mesmo dono (a vendedora só vê a conversa se for dona do contato)
+  const cards = opportunities.filter(o => o.assignedTo !== escolhido)
   for (const o of cards) await ghlGravar('PUT', `/opportunities/${o.id}`, casa.token, { assignedTo: escolhido })
   await sql`update atribuicoes set detalhe = ${sql.json({ cards: cards.map(o => o.id) })}
     where location_id = ${lid} and contato_id = ${contatoId} and simulada = false and origem = ${origem}`
@@ -231,11 +227,12 @@ export async function transferirCards(casa: Casa, opcoes: {
   const trabalhador = async () => {
     while (fila.length && Date.now() < (opcoes.ate ?? Infinity)) {
       const p = fila.shift()!
-      if (p.novo === opcoes.de) { feitos++; continue } // na divisão, a parte de quem cede fica com ela
-      await ghlGravar('PUT', `/opportunities/${p.o.id}`, token, { assignedTo: p.novo })
+      // na divisão, a parte de quem cede fica com ela (o card não muda; o contato é conferido abaixo)
+      if (p.novo !== opcoes.de) await ghlGravar('PUT', `/opportunities/${p.o.id}`, token, { assignedTo: p.novo })
+      // regra da Magical: o contato acompanha sempre o dono do card
       if (p.o.contactId) {
         const { contact } = await ghl<{ contact: any }>(`/contacts/${p.o.contactId}`, token)
-        if (!contact?.assignedTo || contact.assignedTo === opcoes.de) {
+        if (contact?.assignedTo !== p.novo) {
           await ghlGravar('PUT', `/contacts/${p.o.contactId}`, token, { assignedTo: p.novo })
         }
       }
