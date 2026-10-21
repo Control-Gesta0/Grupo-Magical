@@ -137,6 +137,16 @@ create table if not exists transferencias (
 -- transferência só de uma etapa e dividida entre pessoas escolhidas
 alter table transferencias add column if not exists etapa text;
 alter table transferencias add column if not exists destinos text[];
+-- contatos cujo dono foi acertado para o dono dos cards (para conferir e desfazer)
+create table if not exists alinhamentos (
+  id bigserial primary key,
+  location_id text not null,
+  contato_id text not null,
+  de text,
+  para text not null,
+  origem text not null,
+  em timestamptz not null default now()
+);
 create table if not exists sincronizacoes (
   id bigserial primary key,
   location_id text not null,

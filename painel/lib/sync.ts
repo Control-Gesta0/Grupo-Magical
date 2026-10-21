@@ -3,6 +3,7 @@ import { ghl } from './ghl'
 import { chaveEtapa } from './etapas'
 import type { Casa } from './casas'
 import { atribuirContato, modoDaCasa } from './rodizio'
+import { alinhar } from './alinhamento'
 
 const DIA = 86_400_000
 
@@ -14,6 +15,7 @@ export interface ResultadoSync {
   historicosLidos: number
   historicosPendentes: number
   reparados: number
+  alinhados: number
   segundos: number
 }
 
@@ -95,8 +97,9 @@ export async function sincronizarCasa(casa: Casa, ate: number): Promise<Resultad
     await sql`delete from oportunidades where location_id = ${lid} and visto_em < ${agora}`
 
     // rede de segurança do rodízio: lead novo que ficou sem dono (webhook falhou) recebe alguém da equipe
-    let reparados = 0
-    if (await modoDaCasa(lid) === 'ativo') {
+    let reparados = 0, alinhados = 0
+    const ativo = await modoDaCasa(lid) === 'ativo'
+    if (ativo) {
       const semDono = new Set(opps
         .filter(o => o.status === 'open' && !o.assignedTo && o.contactId && Date.now() - Date.parse(o.createdAt) < 48 * 3600_000)
         .map(o => o.contactId as string))
@@ -105,6 +108,17 @@ export async function sincronizarCasa(casa: Casa, ate: number): Promise<Resultad
           if ((await atribuirContato(casa, contato, 'reparo')).ok) reparados++
         } catch { /* tenta de novo na próxima hora */ }
       }
+    }
+
+    // contato acompanha o dono do card: confere os cards mexidos nas últimas 3 horas (ex.: dono trocado à mão no CRM)
+    if (ativo) {
+      try {
+        const recentes = opps.filter(o => o.contactId && Date.now() - Date.parse(o.updatedAt ?? o.lastStatusChangeAt ?? 0) < 3 * 3600_000)
+        alinhados = (await alinhar(casa, {
+          cards: opps, usuariosDaCasa: new Set(users.map(u => u.id)), contatos: recentes.map(o => o.contactId),
+          aplicar: true, origem: 'automatico',
+        })).alinhados
+      } catch { /* tenta de novo na próxima hora */ }
     }
 
     // agendamentos: as visitas ficam nas agendas pessoais, então lê por usuário (janela de -60 a +60 dias)
@@ -149,7 +163,7 @@ export async function sincronizarCasa(casa: Casa, ate: number): Promise<Resultad
 
     const resultado: ResultadoSync = {
       casa: casa.casa, base: casa.base, oportunidades: opps.length, agendamentos: ags.length,
-      historicosLidos: lidos, historicosPendentes: pendentes.length - lidos, reparados,
+      historicosLidos: lidos, historicosPendentes: pendentes.length - lidos, reparados, alinhados,
       segundos: Math.round((Date.now() - t0) / 1000),
     }
     await sql`update sincronizacoes set fim = now(), ok = true, detalhe = ${sql.json(resultado as any)} where id = ${syncId}`
