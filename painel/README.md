@@ -14,7 +14,7 @@ fechamentos que pularam ORÇAMENTO/VISITA e oportunidades sem dono, por casa e p
 
 ## Publicar na Vercel (conta Control Gestão)
 1. **Add New → Project**, importar `Control-Gesta0/Grupo-Magical`, **Root Directory = `painel`**.
-2. **Storage → Create Database → Neon (Postgres)** e conectar ao projeto (cria `DATABASE_URL`).
+2. Criar (ou reaproveitar) um banco **Upstash Redis** e colocar `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN` nas variáveis do projeto. Tudo do painel fica sob o prefixo `magical:`.
 3. Em **Settings → Environment Variables**: `GHL_CASAS_JSON`, `CRON_SECRET`, `SESSION_SECRET`, `PAINEL_USUARIOS`.
 4. Deploy. As tabelas são criadas na primeira sincronização.
 5. Carga inicial mais rápida (opcional), de qualquer máquina com as variáveis:

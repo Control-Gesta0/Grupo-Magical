@@ -1,4 +1,4 @@
-import { db, migrar } from './db'
+import { equipeSalva, registrarAlinhamento } from './dados'
 import { ghl, ghlGravar } from './ghl'
 import type { Casa } from './casas'
 
@@ -23,10 +23,6 @@ function donosPorContato(cards: { contactId?: string; assignedTo?: string; statu
   return m
 }
 
-async function registrar(lid: string, contato: string, de: string | null, para: string, origem: string) {
-  await db()`insert into alinhamentos (location_id, contato_id, de, para, origem) values (${lid}, ${contato}, ${de}, ${para}, ${origem})`
-}
-
 /**
  * Alinha os contatos indicados (ou todos, se `contatos` não vier) usando os cards abertos já lidos.
  * `donoAtual` evita uma leitura por contato quando o dono já é conhecido (varredura completa).
@@ -35,11 +31,9 @@ export async function alinhar(casa: Casa, p: {
   cards: any[]; usuariosDaCasa: Set<string>; contatos?: Iterable<string>; donoAtual?: Map<string, string | null>
   aplicar: boolean; origem: string
 }): Promise<Resumo & { trocas: { contato: string; de: string | null; para: string }[] }> {
-  await migrar()
   const donos = donosPorContato(p.cards)
   const alvo = p.contatos ? [...new Set(p.contatos)].filter(c => donos.has(c)) : [...donos.keys()]
-  const rodizio = new Set((await db()<{ usuario_id: string }[]>`
-    select distinct usuario_id from equipe where location_id = ${casa.locationId}`).map(x => x.usuario_id))
+  const rodizio = new Set(Object.keys(await equipeSalva(casa.locationId)))
   const r = { contatos: alvo.length, alinhados: 0, conflitos: 0, foraDaCasa: 0, protegidos: 0, trocas: [] as { contato: string; de: string | null; para: string }[] }
   for (const contato of alvo) {
     const ds = donos.get(contato)!
@@ -54,7 +48,7 @@ export async function alinhar(casa: Casa, p: {
     if (atual && p.usuariosDaCasa.has(atual) && !rodizio.has(atual)) { r.protegidos++; continue }
     if (p.aplicar) {
       await ghlGravar('PUT', `/contacts/${contato}`, casa.token, { assignedTo: dono })
-      await registrar(casa.locationId, contato, atual, dono, p.origem)
+      await registrarAlinhamento(casa.locationId, { contato_id: contato, de: atual, para: dono, origem: p.origem })
     }
     r.alinhados++
     r.trocas.push({ contato, de: atual, para: dono })

@@ -1,4 +1,4 @@
-import { db, migrar } from '@/lib/db'
+import { modoDaCasa, ultimasAtribuicoes, usuarios } from '@/lib/dados'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,11 +7,11 @@ export async function GET(req: Request) {
   if (!process.env.CRON_SECRET || req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return Response.json({ erro: 'não autorizado' }, { status: 401 })
   }
-  await migrar()
-  const lid = new URL(req.url).searchParams.get('casa')
-  const linhas = await db()`
-    select a.em, a.contato_id, u.nome as usuario, a.origem, a.simulada, a.detalhe
-    from atribuicoes a left join usuarios u on u.id = a.usuario_id
-    where a.location_id = ${lid} order by a.id desc limit 50`
-  return Response.json({ modo: (await db()`select modo from rodizio_config where location_id = ${lid}`)[0]?.modo ?? 'desligado', linhas })
+  const lid = new URL(req.url).searchParams.get('casa') ?? ''
+  const [modo, atribs, nomes] = await Promise.all([modoDaCasa(lid), ultimasAtribuicoes(lid, 50), usuarios()])
+  const linhas = atribs.map(a => ({
+    em: new Date(a.em), contato_id: a.contato_id, usuario: a.usuario_id ? nomes[a.usuario_id]?.nome ?? a.usuario_id : null,
+    origem: a.origem, simulada: a.simulada, detalhe: a.detalhe ?? null,
+  }))
+  return Response.json({ modo, linhas })
 }

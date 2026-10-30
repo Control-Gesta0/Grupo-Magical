@@ -1,5 +1,5 @@
 import { revalidatePath } from 'next/cache'
-import { db, migrar } from '@/lib/db'
+import { acessoDaCasa, casasSalvas, usuarios } from '@/lib/dados'
 import {
   definirAtivo, definirModo, equipeDaCasa, incluirNaEquipe, modoDaCasa, sugerirEquipe, tirarDaEquipe, type Modo,
 } from '@/lib/rodizio'
@@ -12,20 +12,14 @@ const MODOS: Record<Modo, string> = {
 }
 
 export default async function Equipe({ searchParams }: { searchParams: Promise<{ casa?: string }> }) {
-  await migrar()
-  const sql = db()
-  const lista = await sql<{ location_id: string; nome: string }[]>`select location_id, nome from casas where base = 'vendas' order by nome`
+  const lista = await casasSalvas('vendas')
   const lid = (await searchParams).casa ?? lista[0]?.location_id
   const atual = lista.find(c => c.location_id === lid)
   if (!atual) return <div className="aviso">Nenhuma casa sincronizada ainda.</div>
 
   const modo = await modoDaCasa(lid)
-  const [equipe, comAcesso] = await Promise.all([
-    equipeDaCasa(lid, modo !== 'ativo'),
-    sql<{ id: string; nome: string }[]>`
-      select u.id, u.nome from usuario_casa uc join usuarios u on u.id = uc.usuario_id
-      where uc.location_id = ${lid} order by u.nome`,
-  ])
+  const [equipe, acesso, nomes] = await Promise.all([equipeDaCasa(lid, modo !== 'ativo'), acessoDaCasa(lid), usuarios()])
+  const comAcesso = acesso.map(id => ({ id, nome: nomes[id]?.nome ?? id })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
   const naEquipe = new Set(equipe.map(m => m.usuario_id))
   const totalRecebido = equipe.reduce((s, m) => s + m.recebidos_7d, 0)
 

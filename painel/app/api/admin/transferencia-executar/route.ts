@@ -1,5 +1,4 @@
-import { db } from '@/lib/db'
-import { executarTransferencia } from '@/lib/transferencias'
+import { executarTransferencia, lerTransferencia } from '@/lib/transferencias'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -20,6 +19,6 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   if (!(await autorizado(req))) return Response.json({ erro: 'não autorizado' }, { status: 401 })
   const id = Number(new URL(req.url).searchParams.get('id'))
-  const [t] = await db()`select id, status, total, feitos, erro, atualizado_em from transferencias where id = ${id}`
-  return Response.json(t ?? { erro: 'não encontrada' })
+  const t = await lerTransferencia(id)
+  return Response.json(t ? { id: t.id, status: t.status, total: t.total, feitos: t.feitos, erro: t.erro, atualizado_em: new Date(t.atualizado_em) } : { erro: 'não encontrada' })
 }

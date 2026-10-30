@@ -1,7 +1,6 @@
 // Carga pela linha de comando: npm run sync [-- slug-da-casa] [-- --minutos=N]
 import { casas } from '../lib/casas'
 import { sincronizarCasa } from '../lib/sync'
-import { db } from '../lib/db'
 
 const args = process.argv.slice(2)
 const minutos = Number(args.find(a => a.startsWith('--minutos='))?.split('=')[1] ?? 10)
@@ -16,6 +15,5 @@ async function main() {
       console.error(c.casa, c.base, 'ERRO', e.message)
     }
   }
-  await db().end()
 }
 main()

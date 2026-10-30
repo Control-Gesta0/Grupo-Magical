@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { usuarioAtual } from '@/lib/auth'
-import { db, migrar } from '@/lib/db'
+import { acessoDaCasa, casasSalvas, usuarios } from '@/lib/dados'
+import { donosSemAcesso } from '@/lib/metricas'
 import { cancelarSimulacao, executarTransferencia, simularTransferencia, transferenciasDaCasa } from '@/lib/transferencias'
 import { dataHora } from '@/lib/util'
 
@@ -26,27 +27,19 @@ async function exigirAdmin() {
 
 export default async function Transferencias({ searchParams }: { searchParams: Promise<{ casa?: string }> }) {
   await exigirAdmin()
-  await migrar()
-  const sql = db()
-  const lista = await sql<{ location_id: string; nome: string }[]>`select location_id, nome from casas where base = 'vendas' order by nome`
+  const lista = await casasSalvas('vendas')
   const lid = (await searchParams).casa ?? lista[0]?.location_id
   const atual = lista.find(c => c.location_id === lid)
   if (!atual) return <div className="aviso">Nenhuma casa sincronizada ainda.</div>
   const volta = `/transferencias?casa=${lid}`
 
-  const [transferencias, comAcesso] = await Promise.all([
-    transferenciasDaCasa(lid),
-    sql<{ id: string; nome: string }[]>`
-      select u.id, u.nome from usuario_casa uc join usuarios u on u.id = uc.usuario_id
-      where uc.location_id = ${lid} order by u.nome`,
+  const [transferencias, acesso, nomes, semAcesso] = await Promise.all([
+    transferenciasDaCasa(lid), acessoDaCasa(lid), usuarios(), donosSemAcesso(lid),
   ])
+  const porNome = (a: { nome: string }, b: { nome: string }) => a.nome.localeCompare(b.nome, 'pt-BR')
+  const comAcesso = acesso.map(id => ({ id, nome: nomes[id]?.nome ?? id })).sort(porNome)
   // donos de cards abertos que não têm mais acesso à casa (órfãos), para poder transferir os cards deles
-  const orfaos = await sql<{ id: string; nome: string }[]>`
-    select distinct o.dono_id as id, coalesce(u.nome, 'Usuário removido') || ' (sem acesso)' as nome
-    from oportunidades o left join usuarios u on u.id = o.dono_id
-    where o.location_id = ${lid} and o.status = 'open' and o.dono_id is not null
-      and not exists (select 1 from usuario_casa uc where uc.location_id = o.location_id and uc.usuario_id = o.dono_id)
-    order by 2`
+  const orfaos = semAcesso.map(id => ({ id, nome: `${nomes[id]?.nome ?? 'Usuário removido'} (sem acesso)` })).sort(porNome)
 
   async function simular(f: FormData) {
     'use server'
