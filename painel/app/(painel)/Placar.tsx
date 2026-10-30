@@ -33,7 +33,7 @@ export async function Placar({ periodo, anterior, base, titulo, qs }: {
     anterior ? resumoCasas(anterior, base) : Promise.resolve(null),
   ])
   if (casas.length === 0) {
-    return <div className="aviso">Nenhuma conta desta base sincronizada ainda. A sincronização roda nos primeiros minutos de cada hora.</div>
+    return <div className="aviso">Nenhuma conta desta base sincronizada ainda. A sincronização roda a cada 30 minutos.</div>
   }
   const t = somar(casas)
   const a = casasAntes ? somar(casasAntes) : null
@@ -45,7 +45,7 @@ export async function Placar({ periodo, anterior, base, titulo, qs }: {
   return (
     <>
       <p className="suave">
-        {titulo} · dados até {dataHora(syncs.length ? new Date(Math.min(...syncs.map(d => +new Date(d)))) : null)} (atualiza a cada hora)
+        {titulo} · dados até {dataHora(syncs.length ? new Date(Math.min(...syncs.map(d => +new Date(d)))) : null)} (atualiza a cada 30 minutos)
         {anterior && <> · comparado com {dataCurta(anterior.ini)} a {dataCurta(somarDias(anterior.fim, -1))}</>}
       </p>
       {falhas.length > 0 && <div className="aviso">A última sincronização falhou em: {falhas.map(f => f.nome).join(', ')}.</div>}
