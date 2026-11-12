@@ -20,9 +20,11 @@ async function rodar(req: Request, aplicar: boolean) {
       const { customFields = [] } = await ghl<{ customFields: any[] }>(
         `/locations/${casa.locationId}/customFields?model=opportunity`, casa.token)
       const campo = customFields.find(f => normal(f.name ?? '').includes('motivo') && normal(f.name ?? '').includes('descarte'))
-      if (!campo) { resultado.push({ casa: casa.nome, erro: 'campo não encontrado' }); continue }
+      if (!campo) { resultado.push({ casa: casa.nome, erro: 'campo não encontrado', campos: customFields.map(f => `${f.name} (${f.dataType})`) }); continue }
       const atuais: string[] = campo.picklistOptions ?? []
-      const faltam = novos.filter(n => !atuais.some(a => normal(a) === normal(n)))
+      // "Outro" e "Outros" contam como a mesma opção
+      const igual = (a: string, b: string) => normal(a).replace(/s$/, '') === normal(b).replace(/s$/, '')
+      const faltam = novos.filter(n => !atuais.some(a => igual(a, n)))
       if (aplicar && faltam.length) {
         await ghlGravar('PUT', `/locations/${casa.locationId}/customFields/${campo.id}`, casa.token, {
           name: campo.name, model: 'opportunity', options: [...atuais, ...faltam],
