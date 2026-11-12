@@ -6,6 +6,7 @@ export const maxDuration = 120
 
 // Inclui opções no campo "Motivo do Descarte" das oportunidades em todas as contas de vendas. Protegido pelo CRON_SECRET.
 // GET mostra o que mudaria, POST aplica. ?novos=Outros|Crianças/Idoso|Cliques por engano
+// &criar=<locationId>: na conta que não tem o campo, cria "Motivo do Descarte" com as opções de `novos`
 const normal = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
 
 async function rodar(req: Request, aplicar: boolean) {
@@ -20,6 +21,13 @@ async function rodar(req: Request, aplicar: boolean) {
       const { customFields = [] } = await ghl<{ customFields: any[] }>(
         `/locations/${casa.locationId}/customFields?model=opportunity`, casa.token)
       const campo = customFields.find(f => normal(f.name ?? '').includes('motivo') && normal(f.name ?? '').includes('descarte'))
+      if (!campo && new URL(req.url).searchParams.get('criar') === casa.locationId) {
+        const r = aplicar ? await ghlGravar<any>('POST', `/locations/${casa.locationId}/customFields`, casa.token, {
+          name: 'Motivo do Descarte', dataType: 'MULTIPLE_OPTIONS', model: 'opportunity', options: novos,
+        }) : null
+        resultado.push({ casa: casa.nome, criar: novos, criado: r?.customField ?? r })
+        continue
+      }
       if (!campo) { resultado.push({ casa: casa.nome, erro: 'campo não encontrado', campos: customFields.map(f => `${f.name} (${f.dataType})`) }); continue }
       const atuais: string[] = campo.picklistOptions ?? []
       // "Outro" e "Outros" contam como a mesma opção
